@@ -1,0 +1,21 @@
+export const initialCategories = [
+  "Dentistas",
+  "Pet Shops",
+  "Clinicas Veterinarias",
+  "Clinicas Medicas",
+  "Clinicas de Estetica",
+  "Saloes",
+  "Barbearias",
+  "Academias",
+  "Concessionarias",
+  "Imobiliarias",
+  "Advogados",
+  "Restaurantes",
+  "Pizzarias",
+  "Hoteis",
+  "Auto Pecas",
+  "Oficinas",
+  "Escolas",
+  "Contabilidades",
+  "Farmacias"
+];
