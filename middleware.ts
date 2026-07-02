@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { authSecret } from "@/lib/auth-secret";
 
 const publicRoutes = new Set(["/login"]);
 
@@ -7,7 +8,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = await getToken({
     req: request,
-    secret: process.env.NEXTAUTH_SECRET
+    secret: authSecret
   });
 
   if (token && (pathname === "/" || pathname === "/login")) {
