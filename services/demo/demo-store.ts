@@ -47,6 +47,12 @@ export function createDemoSearchJobFromLeads(
   const leads = filterLeads(rawLeads, filters);
   const duplicates = mergeDemoLeads(leads);
   const now = new Date().toISOString();
+  const message =
+    leads.length > 0
+      ? `${source}: ${leads.length} leads reais salvos de ${rawLeads.length} empresas retornadas para ${filters.category} em ${filters.city}.`
+      : rawLeads.length > 0
+        ? `${source}: ${rawLeads.length} empresas retornadas, mas os filtros atuais removeram todas. Tente desmarcar "sem site" ou "WhatsApp" e reduzir nota/avaliacoes.`
+        : `${source}: nenhuma empresa encontrada para essa combinacao. Tente outra categoria, cidade ou filtros mais amplos.`;
 
   const job: SearchJobDto = {
     id: `demo-job-${Date.now()}`,
@@ -58,7 +64,7 @@ export function createDemoSearchJobFromLeads(
     minRating: filters.minRating,
     minReviews: filters.minReviews,
     progress: 100,
-    message: `${source}: ${leads.length} leads reais salvos para ${filters.category} em ${filters.city}.`,
+    message,
     resultCount: leads.length,
     duplicateCount: duplicates,
     error: null,

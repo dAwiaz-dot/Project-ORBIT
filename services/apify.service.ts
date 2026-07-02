@@ -41,13 +41,44 @@ export function buildApifyRunInput(filters: LeadSearchFilters) {
 
   return {
     searchString,
+    searchStringsArray: [searchString],
     maxCrawledPlaces: filters.maxResults,
+    maxCrawledPlacesPerSearch: filters.maxResults,
     language: "pt-BR",
     skipClosedPlaces: true,
     includeWebResults: true,
     proxyConfig: {
       useApifyProxy: true
     }
+  };
+}
+
+export function normalizeApifyPlace(item: unknown, filters: LeadSearchFilters, index: number): Lead {
+  const parsed = apifyPlaceSchema.safeParse(item);
+  const place = parsed.success ? parsed.data : {};
+  const company = normalizeText(place.title) ?? normalizeText(place.name) ?? `Empresa ${index + 1}`;
+  const phone = normalizeText(place.phoneUnformatted) ?? normalizeText(place.phone);
+  const website = normalizeText(place.website);
+  const instagram = normalizeText(place.instagram);
+
+  return {
+    id: `${company}-${index}`.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    company,
+    phone,
+    address: normalizeText(place.address) ?? "",
+    city: filters.city,
+    state: filters.state,
+    website,
+    instagram,
+    googleMapsUrl: normalizeText(place.url),
+    category: filters.category,
+    rating: place.totalScore ?? null,
+    reviewCount: place.reviewsCount ?? null,
+    latitude: place.location?.lat ?? null,
+    longitude: place.location?.lng ?? null,
+    hasWhatsApp: Boolean(phone),
+    status: "NEW",
+    createdAt: new Date().toISOString()
   };
 }
 
@@ -111,31 +142,13 @@ export class ApifyGoogleMapsService {
   }
 
   private normalizePlace(item: unknown, filters: LeadSearchFilters, index: number): Lead {
-    const parsed = apifyPlaceSchema.safeParse(item);
-    const place = parsed.success ? parsed.data : {};
-    const company = place.title ?? place.name ?? `Empresa ${index + 1}`;
-    const phone = place.phoneUnformatted ?? place.phone ?? null;
-
-    return {
-      id: `${company}-${index}`.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-      company,
-      phone,
-      address: place.address ?? "",
-      city: place.city ?? filters.city,
-      state: place.state ?? filters.state,
-      website: place.website ?? null,
-      instagram: place.instagram ?? null,
-      googleMapsUrl: place.url ?? null,
-      category: place.categoryName ?? place.categories?.[0] ?? filters.category,
-      rating: place.totalScore ?? null,
-      reviewCount: place.reviewsCount ?? null,
-      latitude: place.location?.lat ?? null,
-      longitude: place.location?.lng ?? null,
-      hasWhatsApp: Boolean(phone),
-      status: "NEW",
-      createdAt: new Date().toISOString()
-    };
+    return normalizeApifyPlace(item, filters, index);
   }
+}
+
+function normalizeText(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  return trimmed || null;
 }
 
 async function buildApifyStartError(response: Response, actorId: string) {

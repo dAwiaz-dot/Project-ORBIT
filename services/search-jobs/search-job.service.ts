@@ -103,6 +103,7 @@ export async function processSearchJob(jobId: string) {
 
     await updateJob(jobId, { progress: 78, message: "Gravando leads no PostgreSQL" });
     const saved = await persistLeads(leads);
+    const finalMessage = buildSearchResultMessage(rawLeads.length, leads.length, saved);
 
     await prisma.searchHistory.create({
       data: {
@@ -122,7 +123,7 @@ export async function processSearchJob(jobId: string) {
     await updateJob(jobId, {
       status: SearchJobStatus.SUCCEEDED,
       progress: 100,
-      message: "Busca concluida",
+      message: finalMessage,
       resultCount: saved,
       duplicateCount: duplicates,
       completedAt: new Date()
@@ -227,4 +228,16 @@ async function persistLeads(leads: Lead[]) {
   }
 
   return saved;
+}
+
+function buildSearchResultMessage(rawCount: number, filteredCount: number, savedCount: number) {
+  if (savedCount > 0) {
+    return `Busca concluida: ${savedCount} leads salvos de ${rawCount} empresas retornadas pela Apify.`;
+  }
+
+  if (rawCount > 0 && filteredCount === 0) {
+    return `Apify retornou ${rawCount} empresas, mas os filtros atuais removeram todas. Tente desmarcar "sem site" ou "WhatsApp" e reduzir nota/avaliacoes.`;
+  }
+
+  return "Apify nao retornou empresas para essa combinacao. Tente outra categoria, cidade ou filtros mais amplos.";
 }

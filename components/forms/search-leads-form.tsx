@@ -102,7 +102,7 @@ export function SearchLeadsForm() {
       return;
     }
 
-    toast.success(job.resultCount > 0 ? `${job.resultCount} leads gerados` : "Busca concluida");
+    showSearchResultToast(job);
   }
 
   function connectToJob(jobId: string) {
@@ -153,6 +153,15 @@ export function SearchLeadsForm() {
     }
 
     toast.error(message ?? "Nao foi possivel criar a busca");
+  }
+
+  function showSearchResultToast(job: SearchJobDto) {
+    if (job.resultCount > 0) {
+      toast.success(`${job.resultCount} leads gerados`, { description: job.message });
+      return;
+    }
+
+    toast.warning("Busca concluida sem leads", { description: job.message });
   }
 
   return (
@@ -286,6 +295,11 @@ export function SearchLeadsForm() {
                   </div>
                 </div>
                 {activeJob.error && <p className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{activeJob.error}</p>}
+                {activeJob.status === "SUCCEEDED" && activeJob.resultCount === 0 && (
+                  <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                    {activeJob.message}
+                  </p>
+                )}
                 {activeJob.status === "SUCCEEDED" && activeJob.resultCount > 0 && (
                   <Button asChild variant="premium">
                     <Link href="/leads">
