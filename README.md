@@ -54,8 +54,9 @@ OPENAI_API_KEY=""
 SMTP_HOST=""
 SMTP_USER=""
 SMTP_PASSWORD=""
-SEED_ADMIN_EMAIL="admin@orbit.com"
-SEED_ADMIN_PASSWORD="orbit123"
+SEED_ADMIN_NAME="Davi"
+SEED_ADMIN_EMAIL="davi@orbit.local"
+SEED_ADMIN_PASSWORD="110391"
 ```
 
 ## Banco PostgreSQL
@@ -89,8 +90,10 @@ O seed cria:
 Com o seed padrao:
 
 ```txt
-Login: admin@orbit.com
-Senha: orbit123
+Login: Davi
+Senha: 110391
+
+Em desenvolvimento, se o PostgreSQL ainda nao estiver rodando, o login acima tambem funciona como fallback local para apresentacao. Em producao, crie o usuario real com o seed e mantenha o banco PostgreSQL ativo.
 ```
 
 Em producao, troque a senha imediatamente e gere um `NEXTAUTH_SECRET` forte.

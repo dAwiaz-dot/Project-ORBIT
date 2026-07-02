@@ -1,13 +1,13 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { mockLeads } from "@/data/mock-data";
-import type { Lead, LeadStatus, PaginatedLeadsResult } from "@/types/lead";
+import type { Lead, LeadDetail, LeadStatus, PaginatedLeadsResult } from "@/types/lead";
 
 export type LeadListQuery = {
   q?: string;
   category?: string;
   city?: string;
   status?: LeadStatus;
+  sort?: "rating-desc" | "reviews-desc" | "company-asc" | "recent-desc";
   page?: number;
   pageSize?: number;
 };
@@ -23,7 +23,7 @@ export class LeadRepository {
         prisma.lead.findMany({
           where,
           include: { category: true },
-          orderBy: { createdAt: "desc" },
+          orderBy: this.buildOrderBy(query.sort),
           skip: (page - 1) * pageSize,
           take: pageSize
         }),
@@ -31,63 +31,95 @@ export class LeadRepository {
       ]);
 
       return {
-        leads: rows.map((lead) => ({
-          id: lead.id,
-          company: lead.company,
-          phone: lead.phone,
-          address: lead.address ?? "",
-          city: lead.cityName,
-          state: lead.state,
-          website: lead.website,
-          instagram: lead.instagram,
-          googleMapsUrl: lead.googleMaps,
-          category: lead.category?.name ?? "Sem categoria",
-          rating: lead.rating,
-          reviewCount: lead.reviewCount,
-          latitude: lead.latitude,
-          longitude: lead.longitude,
-          hasWhatsApp: lead.hasWhatsApp,
-          status: lead.status,
-          createdAt: lead.createdAt.toISOString()
-        })),
+        leads: rows.map((lead) => this.toLead(lead)),
         total,
         page,
         pageSize,
         totalPages: Math.max(1, Math.ceil(total / pageSize))
       };
-    } catch {
-      return this.listFallback(query, page, pageSize);
+    } catch (error) {
+      console.error("Falha ao listar leads", error);
+      return this.emptyResult(page, pageSize);
     }
   }
 
   async getById(id: string): Promise<Lead | null> {
-    const fallback = mockLeads.find((lead) => lead.id === id) ?? mockLeads[0] ?? null;
-
     try {
       const lead = await prisma.lead.findUnique({ where: { id }, include: { category: true } });
-      if (!lead) return fallback;
+      return lead ? this.toLead(lead) : null;
+    } catch (error) {
+      console.error("Falha ao carregar lead", error);
+      return null;
+    }
+  }
+
+  async getDetails(id: string): Promise<LeadDetail | null> {
+    try {
+      const lead = await prisma.lead.findUnique({
+        where: { id },
+        include: {
+          category: true,
+          owner: { select: { id: true, name: true, email: true } },
+          analyses: { orderBy: { createdAt: "desc" }, take: 1 },
+          followUps: { orderBy: { dueAt: "asc" } },
+          documents: { orderBy: { createdAt: "desc" } },
+          sales: { orderBy: { closedAt: "desc" } }
+        }
+      });
+
+      if (!lead) return null;
+      const latestAnalysis = lead.analyses[0] ?? null;
 
       return {
-        id: lead.id,
-        company: lead.company,
-        phone: lead.phone,
-        address: lead.address ?? "",
-        city: lead.cityName,
-        state: lead.state,
-        website: lead.website,
-        instagram: lead.instagram,
-        googleMapsUrl: lead.googleMaps,
-        category: lead.category?.name ?? "Sem categoria",
-        rating: lead.rating,
-        reviewCount: lead.reviewCount,
-        latitude: lead.latitude,
-        longitude: lead.longitude,
-        hasWhatsApp: lead.hasWhatsApp,
-        status: lead.status,
-        createdAt: lead.createdAt.toISOString()
+        ...this.toLead(lead),
+        owner: lead.owner,
+        analysis: latestAnalysis
+          ? {
+              id: latestAnalysis.id,
+              potentialScore: latestAnalysis.potentialScore,
+              closeProbability: latestAnalysis.closeProbability,
+              grade: latestAnalysis.grade,
+              stars: latestAnalysis.stars,
+              reasons: toStringArray(latestAnalysis.reasons),
+              opportunities: toStringArray(latestAnalysis.opportunities),
+              googleMapsScore: latestAnalysis.googleMapsScore,
+              siteScore: latestAnalysis.siteScore,
+              instagramScore: latestAnalysis.instagramScore,
+              generatedMessage: latestAnalysis.generatedMessage,
+              createdAt: latestAnalysis.createdAt.toISOString()
+            }
+          : null,
+        followUps: lead.followUps.map((followUp) => ({
+          id: followUp.id,
+          title: followUp.title,
+          dueAt: followUp.dueAt.toISOString(),
+          completedAt: followUp.completedAt?.toISOString() ?? null,
+          cadenceDays: followUp.cadenceDays,
+          notes: followUp.notes
+        })),
+        documents: lead.documents.map((document) => ({
+          id: document.id,
+          kind: document.kind,
+          status: document.status,
+          title: document.title,
+          value: document.value ? Number(document.value) : null,
+          deadline: document.deadline,
+          fileUrl: document.fileUrl,
+          createdAt: document.createdAt.toISOString()
+        })),
+        sales: lead.sales.map((sale) => ({
+          id: sale.id,
+          value: Number(sale.value),
+          paymentMethod: sale.paymentMethod,
+          commission: sale.commission ? Number(sale.commission) : null,
+          monthlyRevenue: sale.monthlyRevenue ? Number(sale.monthlyRevenue) : null,
+          profit: sale.profit ? Number(sale.profit) : null,
+          closedAt: sale.closedAt.toISOString()
+        }))
       };
-    } catch {
-      return fallback;
+    } catch (error) {
+      console.error("Falha ao carregar detalhe do lead", error);
+      return null;
     }
   }
 
@@ -119,24 +151,40 @@ export class LeadRepository {
     };
   }
 
-  private listFallback(query: LeadListQuery, page: number, pageSize: number): PaginatedLeadsResult {
-    const q = query.q?.toLowerCase() ?? "";
-    const filtered = mockLeads.filter((lead) => {
-      const matchesQuery =
-        !q || [lead.company, lead.phone, lead.instagram, lead.city, lead.category].some((field) => String(field ?? "").toLowerCase().includes(q));
-      const matchesCategory = !query.category || lead.category === query.category;
-      const matchesCity = !query.city || lead.city === query.city;
-      const matchesStatus = !query.status || lead.status === query.status;
-      return matchesQuery && matchesCategory && matchesCity && matchesStatus;
-    });
-    const start = (page - 1) * pageSize;
+  private buildOrderBy(sort: LeadListQuery["sort"]): Prisma.LeadOrderByWithRelationInput {
+    if (sort === "rating-desc") return { rating: "desc" };
+    if (sort === "reviews-desc") return { reviewCount: "desc" };
+    if (sort === "company-asc") return { company: "asc" };
+    return { createdAt: "desc" };
+  }
 
+  private emptyResult(page: number, pageSize: number): PaginatedLeadsResult {
+    return { leads: [], total: 0, page, pageSize, totalPages: 1 };
+  }
+
+  private toLead(lead: Prisma.LeadGetPayload<{ include: { category: true } }>): Lead {
     return {
-      leads: filtered.slice(start, start + pageSize),
-      total: filtered.length,
-      page,
-      pageSize,
-      totalPages: Math.max(1, Math.ceil(filtered.length / pageSize))
+      id: lead.id,
+      company: lead.company,
+      phone: lead.phone,
+      address: lead.address ?? "",
+      city: lead.cityName,
+      state: lead.state,
+      website: lead.website,
+      instagram: lead.instagram,
+      googleMapsUrl: lead.googleMaps,
+      category: lead.category?.name ?? "Sem categoria",
+      rating: lead.rating,
+      reviewCount: lead.reviewCount,
+      latitude: lead.latitude,
+      longitude: lead.longitude,
+      hasWhatsApp: lead.hasWhatsApp,
+      status: lead.status,
+      createdAt: lead.createdAt.toISOString()
     };
   }
+}
+
+function toStringArray(value: Prisma.JsonValue) {
+  return Array.isArray(value) ? value.map((item) => String(item)) : [];
 }

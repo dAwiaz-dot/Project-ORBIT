@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowUpDown, ExternalLink, FileText, MessageCircle, Search } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { ArrowUpDown, ChevronLeft, ChevronRight, ExternalLink, Eye, FileText, Loader2, MessageCircle, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,38 +10,70 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { mockLeads } from "@/data/mock-data";
 import { initialCategories } from "@/data/categories";
 import { useDebounce } from "@/hooks/use-debounce";
 import { leadStatusLabels, leadStatusTone } from "@/models/lead-status";
 import { buildWhatsAppUrl } from "@/services/whatsapp.service";
-import { formatPhone, formatRating } from "@/utils/formatters";
+import type { PaginatedLeadsResult } from "@/types/lead";
+import { formatNumber, formatPhone, formatRating } from "@/utils/formatters";
+
+const emptyResult: PaginatedLeadsResult = {
+  leads: [],
+  total: 0,
+  page: 1,
+  pageSize: 25,
+  totalPages: 1
+};
 
 export function LeadTable() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState("rating-desc");
+  const [page, setPage] = useState(1);
+  const [result, setResult] = useState<PaginatedLeadsResult>(emptyResult);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const debouncedQuery = useDebounce(query, 200);
 
-  const leads = useMemo(() => {
-    const search = debouncedQuery.trim().toLowerCase();
-    const filtered = mockLeads.filter((lead) => {
-      const matchesQuery =
-        !search ||
-        [lead.company, lead.city, lead.category, lead.phone, lead.instagram].some((field) =>
-          String(field ?? "").toLowerCase().includes(search)
-        );
-      const matchesCategory = category === "all" || lead.category === category;
-      return matchesQuery && matchesCategory;
+  useEffect(() => {
+    setPage(1);
+  }, [category, debouncedQuery, sort]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadLeads() {
+      setLoading(true);
+      setError(null);
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: "25",
+        sort
+      });
+
+      if (debouncedQuery.trim()) params.set("q", debouncedQuery.trim());
+      if (category !== "all") params.set("category", category);
+
+      const response = await fetch(`/api/leads?${params.toString()}`, { signal: controller.signal });
+      if (!response.ok) {
+        setLoading(false);
+        setError("Nao foi possivel carregar os leads.");
+        return;
+      }
+
+      const data = (await response.json()) as PaginatedLeadsResult;
+      setResult(data);
+      setLoading(false);
+    }
+
+    void loadLeads().catch((loadError: unknown) => {
+      if ((loadError as Error).name === "AbortError") return;
+      setLoading(false);
+      setError("Nao foi possivel carregar os leads.");
     });
 
-    return [...filtered].sort((a, b) => {
-      if (sort === "rating-desc") return Number(b.rating ?? 0) - Number(a.rating ?? 0);
-      if (sort === "reviews-desc") return Number(b.reviewCount ?? 0) - Number(a.reviewCount ?? 0);
-      if (sort === "company-asc") return a.company.localeCompare(b.company);
-      return Date.parse(b.createdAt) - Date.parse(a.createdAt);
-    });
-  }, [category, debouncedQuery, sort]);
+    return () => controller.abort();
+  }, [category, debouncedQuery, page, sort]);
 
   async function downloadProposal(leadId: string) {
     const response = await fetch("/api/documents/proposal", {
@@ -125,10 +158,12 @@ export function LeadTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {leads.map((lead) => (
+            {result.leads.map((lead) => (
               <TableRow key={lead.id}>
                 <TableCell>
-                  <div className="font-semibold">{lead.company}</div>
+                  <Link href={`/leads/${lead.id}`} className="font-semibold hover:text-primary hover:underline">
+                    {lead.company}
+                  </Link>
                   <div className="text-xs text-muted-foreground">{lead.address}</div>
                 </TableCell>
                 <TableCell>{lead.category}</TableCell>
@@ -155,6 +190,12 @@ export function LeadTable() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/leads/${lead.id}`}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Detalhe
+                      </Link>
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => downloadProposal(lead.id)}>
                       <FileText className="mr-2 h-4 w-4" />
                       Proposta
@@ -172,10 +213,19 @@ export function LeadTable() {
                 </TableCell>
               </TableRow>
             ))}
-            {!leads.length && (
+            {!result.leads.length && (
               <TableRow>
                 <TableCell colSpan={11} className="h-36 text-center text-muted-foreground">
-                  Nenhum lead cadastrado. Use Buscar Leads para iniciar a primeira prospeccao.
+                  {loading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Carregando leads
+                    </span>
+                  ) : error ? (
+                    error
+                  ) : (
+                    "Nenhum lead cadastrado. Use Buscar Leads para iniciar a primeira prospeccao."
+                  )}
                 </TableCell>
               </TableRow>
             )}
@@ -183,13 +233,25 @@ export function LeadTable() {
         </Table>
 
         <div className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <span>Mostrando {leads.length} de {mockLeads.length} leads</span>
+          <span>
+            Mostrando {formatNumber(result.leads.length)} de {formatNumber(result.total)} leads
+          </span>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled>
+            <Button variant="outline" size="sm" disabled={loading || result.page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+              <ChevronLeft className="mr-2 h-4 w-4" />
               Anterior
             </Button>
-            <Button variant="outline" size="sm">
+            <span className="px-2 text-xs">
+              Pagina {result.page} de {result.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={loading || result.page >= result.totalPages}
+              onClick={() => setPage((current) => current + 1)}
+            >
               Proxima
+              <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>

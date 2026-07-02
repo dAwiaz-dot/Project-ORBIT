@@ -11,6 +11,7 @@ import {
   Building2,
   CalendarClock,
   Download,
+  FileSpreadsheet,
   FileBarChart,
   Landmark,
   History,
@@ -46,6 +47,7 @@ const navigation = [
   { label: "Financeiro", href: "/financeiro", icon: Landmark },
   { label: "Relatorios", href: "/relatorios", icon: FileBarChart },
   { label: "Exportacoes", href: "/exportacoes", icon: Download },
+  { label: "Importacao", href: "/importacao", icon: FileSpreadsheet },
   { label: "Historico", href: "/historico", icon: History },
   { label: "Equipe", href: "/equipe", icon: UsersRound },
   { label: "Configuracoes", href: "/configuracoes", icon: Settings }

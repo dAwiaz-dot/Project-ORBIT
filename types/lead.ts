@@ -47,3 +47,54 @@ export type PaginatedLeadsResult = {
   pageSize: number;
   totalPages: number;
 };
+
+export type LeadAnalysisSummary = {
+  id: string;
+  potentialScore: number;
+  closeProbability: number;
+  grade: string;
+  stars: number;
+  reasons: string[];
+  opportunities: string[];
+  googleMapsScore: number;
+  siteScore: number;
+  instagramScore: number;
+  generatedMessage: string;
+  createdAt: string;
+};
+
+export type LeadDetail = Lead & {
+  owner: {
+    id: string;
+    name: string | null;
+    email: string | null;
+  } | null;
+  analysis: LeadAnalysisSummary | null;
+  followUps: Array<{
+    id: string;
+    title: string;
+    dueAt: string;
+    completedAt: string | null;
+    cadenceDays: number;
+    notes: string | null;
+  }>;
+  documents: Array<{
+    id: string;
+    kind: string;
+    status: string;
+    title: string;
+    value: number | null;
+    deadline: string | null;
+    fileUrl: string | null;
+    createdAt: string;
+  }>;
+  sales: Array<{
+    id: string;
+    value: number;
+    paymentMethod: string;
+    commission: number | null;
+    monthlyRevenue: number | null;
+    profit: number | null;
+    closedAt: string;
+  }>;
+};

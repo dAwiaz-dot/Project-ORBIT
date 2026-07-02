@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Loader2, MapPin, Rocket, SlidersHorizontal, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Clock3, Loader2, MapPin, Rocket, SlidersHorizontal, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { initialCategories } from "@/data/categories";
-import { mockLeads } from "@/data/mock-data";
 import { sulMinasCities } from "@/data/sul-minas-cities";
-import { filterLeads } from "@/services/lead-filter.service";
 import type { LeadSearchFilters } from "@/types/lead";
-import { formatPhone, formatRating } from "@/utils/formatters";
+import type { SearchJobDto, SearchJobStatus } from "@/types/search-job";
 
 const defaultFilters: LeadSearchFilters = {
   state: "MG",
@@ -31,26 +29,95 @@ const defaultFilters: LeadSearchFilters = {
   ignoreDuplicates: true
 };
 
+const statusLabels: Record<SearchJobStatus, string> = {
+  PENDING: "Na fila",
+  RUNNING: "Rodando",
+  SUCCEEDED: "Concluida",
+  FAILED: "Falhou",
+  CANCELLED: "Cancelada"
+};
+
+const statusTones: Record<SearchJobStatus, "info" | "secondary" | "success" | "warning" | "danger"> = {
+  PENDING: "secondary",
+  RUNNING: "info",
+  SUCCEEDED: "success",
+  FAILED: "danger",
+  CANCELLED: "warning"
+};
+
+const terminalStatuses = new Set<SearchJobStatus>(["SUCCEEDED", "FAILED", "CANCELLED"]);
+
 export function SearchLeadsForm() {
   const [filters, setFilters] = useState(defaultFilters);
   const [loading, setLoading] = useState(false);
-  const [generated, setGenerated] = useState(mockLeads.slice(0, 3));
+  const [jobs, setJobs] = useState<SearchJobDto[]>([]);
+  const [activeJob, setActiveJob] = useState<SearchJobDto | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
-  const estimated = useMemo(() => filterLeads(mockLeads, filters), [filters]);
+  useEffect(() => {
+    void loadJobs();
+    return () => eventSourceRef.current?.close();
+  }, []);
 
   function update<K extends keyof LeadSearchFilters>(key: K, value: LeadSearchFilters[K]) {
     setFilters((current) => ({ ...current, [key]: value }));
   }
 
+  async function loadJobs() {
+    const response = await fetch("/api/search-jobs");
+    if (!response.ok) {
+      toast.error(response.status === 401 ? "Faca login para buscar leads" : "Nao foi possivel carregar a fila");
+      return;
+    }
+
+    const payload = (await response.json()) as { jobs: SearchJobDto[] };
+    setJobs(payload.jobs);
+    setActiveJob((current) => current ?? payload.jobs[0] ?? null);
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setGenerated(estimated.length ? estimated : mockLeads.slice(0, 4));
-    setLoading(false);
-    toast.success("Busca preparada", {
-      description: "A integracao Apify esta pronta. Configure o token para rodar a coleta real."
+
+    const response = await fetch("/api/search-jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(filters)
     });
+
+    setLoading(false);
+    const payload = (await response.json().catch(() => ({}))) as { job?: SearchJobDto; error?: string };
+    if (!response.ok || !payload.job) {
+      toast.error(payload.error ?? "Nao foi possivel criar a busca");
+      return;
+    }
+
+    const job = payload.job;
+    setActiveJob(job);
+    setJobs((current) => upsertJob(current, job));
+    connectToJob(job.id);
+    toast.success("Busca adicionada a fila");
+  }
+
+  function connectToJob(jobId: string) {
+    eventSourceRef.current?.close();
+    const source = new EventSource(`/api/search-jobs/${jobId}/events`);
+    eventSourceRef.current = source;
+
+    source.onmessage = (event) => {
+      const job = JSON.parse(event.data) as SearchJobDto;
+      setActiveJob(job);
+      setJobs((current) => upsertJob(current, job));
+      if (terminalStatuses.has(job.status)) {
+        source.close();
+        eventSourceRef.current = null;
+      }
+    };
+
+    source.onerror = () => {
+      source.close();
+      eventSourceRef.current = null;
+    };
   }
 
   return (
@@ -118,33 +185,15 @@ export function SearchLeadsForm() {
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label>Quantidade maxima</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={500}
-                  value={filters.maxResults}
-                  onChange={(event) => update("maxResults", Number(event.target.value))}
-                />
+                <Input type="number" min={1} max={500} value={filters.maxResults} onChange={(event) => update("maxResults", Number(event.target.value))} />
               </div>
               <div className="space-y-2">
                 <Label>Nota minima</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={5}
-                  step={0.1}
-                  value={filters.minRating}
-                  onChange={(event) => update("minRating", Number(event.target.value))}
-                />
+                <Input type="number" min={0} max={5} step={0.1} value={filters.minRating} onChange={(event) => update("minRating", Number(event.target.value))} />
               </div>
               <div className="space-y-2">
                 <Label>Min. avaliacoes</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={filters.minReviews}
-                  onChange={(event) => update("minReviews", Number(event.target.value))}
-                />
+                <Input type="number" min={0} value={filters.minReviews} onChange={(event) => update("minReviews", Number(event.target.value))} />
               </div>
             </div>
 
@@ -179,26 +228,35 @@ export function SearchLeadsForm() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-accent" />
-                Previsao da coleta
+                Status em tempo real
               </CardTitle>
-              <Badge variant="success">{generated.length} leads na amostra</Badge>
+              {activeJob && <Badge variant={statusTones[activeJob.status]}>{statusLabels[activeJob.status]}</Badge>}
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-lg border bg-background p-4">
-                <p className="text-xs text-muted-foreground">Potencial</p>
-                <p className="mt-1 text-2xl font-bold">{filters.maxResults}</p>
+            {activeJob ? (
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Metric label="Cidade" value={`${activeJob.city}/${activeJob.state}`} />
+                  <Metric label="Categoria" value={activeJob.category} />
+                  <Metric label="Leads gravados" value={String(activeJob.resultCount)} />
+                </div>
+                <div>
+                  <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{activeJob.message}</span>
+                    <span>{activeJob.progress}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-secondary">
+                    <div className="h-full bg-[linear-gradient(90deg,#1E68FF,#16B8A6)] transition-all dark:bg-[linear-gradient(90deg,#FFFFFF,#8A8A8A)]" style={{ width: `${activeJob.progress}%` }} />
+                  </div>
+                </div>
+                {activeJob.error && <p className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{activeJob.error}</p>}
               </div>
-              <div className="rounded-lg border bg-background p-4">
-                <p className="text-xs text-muted-foreground">Sem site</p>
-                <p className="mt-1 text-2xl font-bold">{generated.filter((lead) => !lead.website).length}</p>
+            ) : (
+              <div className="grid min-h-[180px] place-items-center rounded-lg border border-dashed bg-background/70 p-6 text-center text-sm text-muted-foreground">
+                Nenhuma busca ativa ainda.
               </div>
-              <div className="rounded-lg border bg-background p-4">
-                <p className="text-xs text-muted-foreground">Com WhatsApp</p>
-                <p className="mt-1 text-2xl font-bold">{generated.filter((lead) => lead.hasWhatsApp).length}</p>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -206,34 +264,42 @@ export function SearchLeadsForm() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-primary" />
-              Leads encontrados
+              Fila de buscas Apify
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Cidade</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Nota</TableHead>
-                  <TableHead>Site</TableHead>
+                  <TableHead>Busca</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Progresso</TableHead>
+                  <TableHead>Resultado</TableHead>
+                  <TableHead>Hora</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {generated.map((lead) => (
-                  <TableRow key={lead.id}>
-                    <TableCell className="font-medium">{lead.company}</TableCell>
-                    <TableCell>{lead.city}</TableCell>
-                    <TableCell>{formatPhone(lead.phone)}</TableCell>
-                    <TableCell>{formatRating(lead.rating)}</TableCell>
-                    <TableCell>{lead.website ? "Sim" : <Badge variant="warning">Sem site</Badge>}</TableCell>
+                {jobs.map((job) => (
+                  <TableRow key={job.id} className="cursor-pointer" onClick={() => setActiveJob(job)}>
+                    <TableCell>
+                      <div className="font-medium">{job.category}</div>
+                      <div className="text-xs text-muted-foreground">{job.city}/{job.state}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={statusTones[job.status]}>{statusLabels[job.status]}</Badge>
+                    </TableCell>
+                    <TableCell>{job.progress}%</TableCell>
+                    <TableCell>{job.resultCount} leads</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      <Clock3 className="mr-1 inline h-3 w-3" />
+                      {new Date(job.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    </TableCell>
                   </TableRow>
                 ))}
-                {!generated.length && (
+                {!jobs.length && (
                   <TableRow>
                     <TableCell colSpan={5} className="h-28 text-center text-muted-foreground">
-                      Nenhum lead gerado ainda. A primeira busca preenchera esta area.
+                      Nenhuma busca enviada para a fila.
                     </TableCell>
                   </TableRow>
                 )}
@@ -244,4 +310,19 @@ export function SearchLeadsForm() {
       </div>
     </div>
   );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border bg-background p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-lg font-bold">{value}</p>
+    </div>
+  );
+}
+
+function upsertJob(jobs: SearchJobDto[], job: SearchJobDto) {
+  const exists = jobs.some((item) => item.id === job.id);
+  if (!exists) return [job, ...jobs];
+  return jobs.map((item) => (item.id === job.id ? job : item));
 }

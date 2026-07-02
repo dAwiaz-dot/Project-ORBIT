@@ -7,14 +7,19 @@ import { mockLeads } from "../data/mock-data";
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "admin@orbit.com";
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "orbit123";
+  const adminName = process.env.SEED_ADMIN_NAME ?? "Davi";
+  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "davi@orbit.local";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "110391";
 
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {},
+    update: {
+      name: adminName,
+      passwordHash: await hash(adminPassword, 12),
+      role: "ADMIN"
+    },
     create: {
-      name: "Orbit Admin",
+      name: adminName,
       email: adminEmail,
       passwordHash: await hash(adminPassword, 12),
       role: "ADMIN"
@@ -115,7 +120,7 @@ async function main() {
     skipDuplicates: true
   });
 
-  console.log(`Seed concluido. Login: ${adminEmail} / ${adminPassword}`);
+  console.log(`Seed concluido. Login: ${adminName} / ${adminPassword}`);
 }
 
 main()

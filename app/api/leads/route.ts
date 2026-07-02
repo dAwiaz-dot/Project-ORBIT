@@ -12,6 +12,7 @@ export async function GET(request: Request) {
     category: url.searchParams.get("category") ?? undefined,
     city: url.searchParams.get("city") ?? undefined,
     status: (url.searchParams.get("status") as LeadStatus | null) ?? undefined,
+    sort: (url.searchParams.get("sort") as "rating-desc" | "reviews-desc" | "company-asc" | "recent-desc" | null) ?? undefined,
     page,
     pageSize
   });

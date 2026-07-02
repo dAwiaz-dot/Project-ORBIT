@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { ArrowRight, Eye, LockKeyhole, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, LockKeyhole, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,13 +13,14 @@ import { OrbitLogo } from "@/components/ui/orbit-logo";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     const form = new FormData(event.currentTarget);
     const result = await signIn("credentials", {
-      email: String(form.get("email")),
+      login: String(form.get("login")),
       password: String(form.get("password")),
       redirect: false,
       callbackUrl: "/dashboard"
@@ -81,10 +82,10 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Login</Label>
+                <Label htmlFor="login">Login</Label>
                 <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="email" name="email" type="email" className="pl-9" defaultValue="admin@orbit.com" required />
+                  <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input id="login" name="login" type="text" autoComplete="username" className="pl-9" defaultValue="Davi" required />
                 </div>
               </div>
               <div className="space-y-2">
@@ -96,8 +97,25 @@ export default function LoginPage() {
                 </div>
                 <div className="relative">
                   <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="password" name="password" type="password" className="px-9" defaultValue="orbit123" required />
-                  <Eye className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    className="px-9"
+                    defaultValue="110391"
+                    required
+                  />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    aria-pressed={showPassword}
+                    title={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    className="focus-ring absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    onClick={() => setShowPassword((current) => !current)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
               <Button type="submit" size="lg" variant="premium" className="w-full" disabled={loading}>

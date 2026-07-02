@@ -57,6 +57,14 @@ enum ExportStatus {
   FAILED
 }
 
+enum SearchJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -72,8 +80,11 @@ model User {
   sessions Session[]
   messages MessageTemplate[]
   searches SearchHistory[]
+  searchJobs SearchJob[]
   assignedLeads Lead[] @relation("LeadOwner")
   sales Sale[]
+  auditLogs AuditLog[]
+  logoAssets LogoAsset[]
 }
 
 model Account {
@@ -167,6 +178,7 @@ model Lead {
   followUps FollowUp[]
   documents ProposalDocument[]
   sales     Sale[]
+  auditLogs AuditLog[]
 
   @@index([cityName, state])
   @@index([status])
@@ -307,6 +319,54 @@ model ExportJob {
   updatedAt DateTime     @updatedAt
 }
 
+model SearchJob {
+  id             String          @id @default(cuid())
+  status         SearchJobStatus @default(PENDING)
+  state          String
+  city           String
+  category       String
+  maxResults     Int
+  minRating      Float?
+  minReviews     Int?
+  filters        Json
+  progress       Int             @default(0)
+  message        String          @default("Na fila")
+  resultCount    Int             @default(0)
+  duplicateCount Int             @default(0)
+  error          String?         @db.Text
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
 model SearchHistory {
   id            String   @id @default(cuid())
   state         String
@@ -328,6 +388,7 @@ model AppSettings {
   id             String   @id @default(cuid())
   companyName    String   @default("Orbit")
   logoUrl        String?
+  logoStorageKey String?
   apifyToken     String?  @db.Text
   openAiApiKey   String?  @db.Text
   smtpHost       String?
@@ -338,4 +399,21 @@ model AppSettings {
   theme          String   @default("light")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model LogoAsset {
+  id          String   @id @default(cuid())
+  fileName    String
+  mimeType    String
+  size        Int
+  provider    String
+  storageKey  String?
+  publicUrl   String
+  createdAt   DateTime @default(now())
+
+  uploadedById String?
+  uploadedBy   User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([uploadedById])
+  @@index([createdAt])
 }
