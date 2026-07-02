@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { BrainCircuit, Database, KeyRound, Loader2, Mail, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,9 +19,20 @@ type SettingsState = {
   smtpHost: string;
   smtpUser: string;
   smtpPassword: string;
+  apifyTokenConfigured: boolean;
+  openAiApiKeyConfigured: boolean;
+  smtpPasswordConfigured: boolean;
   databaseNote: string;
   defaultMessage: string;
   theme: "light" | "dark" | "system";
+};
+
+type SettingsResponse = Partial<
+  Pick<SettingsState, "companyName" | "logoUrl" | "smtpHost" | "smtpUser" | "databaseNote" | "defaultMessage" | "theme">
+> & {
+  apifyTokenConfigured?: boolean;
+  openAiApiKeyConfigured?: boolean;
+  smtpPasswordConfigured?: boolean;
 };
 
 const defaultSettings: SettingsState = {
@@ -31,6 +43,9 @@ const defaultSettings: SettingsState = {
   smtpHost: "",
   smtpUser: "",
   smtpPassword: "",
+  apifyTokenConfigured: false,
+  openAiApiKeyConfigured: false,
+  smtpPasswordConfigured: false,
   databaseNote: "",
   defaultMessage: "Ola {empresa}, tudo bem? Vi o trabalho de voces em {cidade}...",
   theme: "light"
@@ -52,17 +67,20 @@ export function SettingsForm() {
         return;
       }
 
-      const data = (await response.json()) as Partial<Record<keyof SettingsState, string | null>>;
+      const data = (await response.json()) as SettingsResponse;
       setSettings({
-        companyName: data.companyName ?? defaultSettings.companyName,
-        logoUrl: data.logoUrl ?? "",
-        apifyToken: data.apifyToken ?? "",
-        openAiApiKey: data.openAiApiKey ?? "",
-        smtpHost: data.smtpHost ?? "",
-        smtpUser: data.smtpUser ?? "",
-        smtpPassword: data.smtpPassword ?? "",
-        databaseNote: data.databaseNote ?? "",
-        defaultMessage: data.defaultMessage ?? defaultSettings.defaultMessage,
+        companyName: data.companyName || defaultSettings.companyName,
+        logoUrl: data.logoUrl || "",
+        apifyToken: "",
+        openAiApiKey: "",
+        smtpHost: data.smtpHost || "",
+        smtpUser: data.smtpUser || "",
+        smtpPassword: "",
+        apifyTokenConfigured: Boolean(data.apifyTokenConfigured),
+        openAiApiKeyConfigured: Boolean(data.openAiApiKeyConfigured),
+        smtpPasswordConfigured: Boolean(data.smtpPasswordConfigured),
+        databaseNote: data.databaseNote || "",
+        defaultMessage: data.defaultMessage || defaultSettings.defaultMessage,
         theme: data.theme === "dark" || data.theme === "system" ? data.theme : "light"
       });
       setLoading(false);
@@ -78,18 +96,29 @@ export function SettingsForm() {
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
+    const payload = buildSettingsPayload(settings);
     const response = await fetch("/api/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(settings)
+      body: JSON.stringify(payload)
     });
 
     setSaving(false);
+    const data = (await response.json().catch(() => ({}))) as SettingsResponse;
     if (!response.ok) {
       toast.error("Nao foi possivel salvar configuracoes");
       return;
     }
 
+    setSettings((current) => ({
+      ...current,
+      apifyToken: "",
+      openAiApiKey: "",
+      smtpPassword: "",
+      apifyTokenConfigured: Boolean(data.apifyTokenConfigured || settings.apifyToken.trim()),
+      openAiApiKeyConfigured: Boolean(data.openAiApiKeyConfigured || settings.openAiApiKey.trim()),
+      smtpPasswordConfigured: Boolean(data.smtpPasswordConfigured || settings.smtpPassword.trim())
+    }));
     toast.success("Configuracoes salvas");
   }
 
@@ -170,13 +199,17 @@ export function SettingsForm() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Apify Token</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label>Apify Token</Label>
+                {settings.apifyTokenConfigured && <Badge variant="success">Configurado</Badge>}
+              </div>
               <Input
                 type="password"
                 value={settings.apifyToken}
                 onChange={(event) => update("apifyToken", event.target.value)}
-                placeholder="apify_api_..."
+                placeholder={settings.apifyTokenConfigured ? "Digite uma nova chave para trocar" : "apify_api_..."}
                 disabled={loading}
+                autoComplete="off"
               />
             </div>
             <div className="space-y-2">
@@ -195,13 +228,17 @@ export function SettingsForm() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>OpenAI API Key</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label>OpenAI API Key</Label>
+                {settings.openAiApiKeyConfigured && <Badge variant="success">Configurada</Badge>}
+              </div>
               <Input
                 type="password"
                 value={settings.openAiApiKey}
                 onChange={(event) => update("openAiApiKey", event.target.value)}
-                placeholder="sk-..."
+                placeholder={settings.openAiApiKeyConfigured ? "Digite uma nova chave para trocar" : "sk-..."}
                 disabled={loading}
+                autoComplete="off"
               />
             </div>
             <p className="text-xs leading-5 text-muted-foreground">
@@ -233,8 +270,9 @@ export function SettingsForm() {
                 type="password"
                 value={settings.smtpPassword}
                 onChange={(event) => update("smtpPassword", event.target.value)}
-                placeholder="Senha"
+                placeholder={settings.smtpPasswordConfigured ? "Senha configurada" : "Senha"}
                 disabled={loading}
+                autoComplete="off"
               />
             </div>
           </div>
@@ -254,4 +292,19 @@ export function SettingsForm() {
       </Card>
     </form>
   );
+}
+
+function buildSettingsPayload(settings: SettingsState) {
+  return {
+    companyName: settings.companyName,
+    logoUrl: settings.logoUrl,
+    smtpHost: settings.smtpHost,
+    smtpUser: settings.smtpUser,
+    databaseNote: settings.databaseNote,
+    defaultMessage: settings.defaultMessage,
+    theme: settings.theme,
+    ...(settings.apifyToken.trim() ? { apifyToken: settings.apifyToken.trim() } : {}),
+    ...(settings.openAiApiKey.trim() ? { openAiApiKey: settings.openAiApiKey.trim() } : {}),
+    ...(settings.smtpPassword.trim() ? { smtpPassword: settings.smtpPassword.trim() } : {})
+  };
 }

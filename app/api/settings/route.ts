@@ -22,11 +22,8 @@ const demoSettings = {
   companyName: "Orbit",
   logoUrl: null,
   logoStorageKey: null,
-  apifyToken: "",
-  openAiApiKey: "",
   smtpHost: "",
   smtpUser: "",
-  smtpPassword: "",
   databaseNote: "Modo demonstracao local: PostgreSQL ainda nao esta rodando.",
   defaultMessage: "Ola {empresa}, tudo bem? Vi o trabalho de voces em {cidade}...",
   theme: "light",
@@ -38,48 +35,51 @@ export async function GET() {
   try {
     await requirePermission("settings:read");
     const settings =
-      (await prisma.appSettings.findFirst()) ??
-      (await prisma.appSettings.create({
+      (await withDatabaseTimeout(prisma.appSettings.findFirst())) ??
+      (await withDatabaseTimeout(prisma.appSettings.create({
         data: {
           id: "orbit-settings",
           companyName: "Orbit"
         }
-      }));
+      })));
 
-    return NextResponse.json(settings);
+    return NextResponse.json(sanitizeSettings(settings));
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    return NextResponse.json(demoSettings);
+    return NextResponse.json(sanitizeSettings(demoSettings));
   }
 }
 
 export async function PATCH(request: Request) {
+  const body = await request.json().catch(() => ({}));
+  const parsed = settingsSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Configuracoes invalidas", details: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const writeData = toSettingsWriteData(parsed.data);
+
   try {
     const user = await requirePermission("settings:write");
-    const body = await request.json();
-    const parsed = settingsSchema.safeParse(body);
 
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Configuracoes invalidas", details: parsed.error.flatten() }, { status: 400 });
-    }
-
-    const settings = await prisma.appSettings.upsert({
+    const settings = await withDatabaseTimeout(prisma.appSettings.upsert({
       where: { id: "orbit-settings" },
-      update: parsed.data,
+      update: writeData,
       create: {
         id: "orbit-settings",
         companyName: parsed.data.companyName ?? "Orbit",
         logoUrl: parsed.data.logoUrl || null,
-        apifyToken: parsed.data.apifyToken,
-        openAiApiKey: parsed.data.openAiApiKey,
+        apifyToken: parsed.data.apifyToken?.trim() || undefined,
+        openAiApiKey: parsed.data.openAiApiKey?.trim() || undefined,
         smtpHost: parsed.data.smtpHost,
         smtpUser: parsed.data.smtpUser,
-        smtpPassword: parsed.data.smtpPassword,
+        smtpPassword: parsed.data.smtpPassword?.trim() || undefined,
         databaseNote: parsed.data.databaseNote,
         defaultMessage: parsed.data.defaultMessage,
         theme: parsed.data.theme ?? "light"
       }
-    });
+    }));
 
     await recordAudit({
       action: "SETTINGS_UPDATED",
@@ -90,15 +90,54 @@ export async function PATCH(request: Request) {
       request
     });
 
-    return NextResponse.json(settings);
+    return NextResponse.json(sanitizeSettings(settings));
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    const body = await request.json().catch(() => ({}));
-    return NextResponse.json({
-      ...demoSettings,
-      ...body,
-      id: "orbit-settings-demo",
-      databaseNote: "Configuracoes mantidas apenas nesta demonstracao local porque o PostgreSQL nao esta rodando."
-    });
+    return NextResponse.json(
+      sanitizeSettings({
+        ...demoSettings,
+        ...writeData,
+        id: "orbit-settings-demo",
+        databaseNote: "Configuracoes mantidas apenas nesta demonstracao local porque o PostgreSQL nao esta rodando."
+      })
+    );
   }
+}
+
+function toSettingsWriteData(data: z.infer<typeof settingsSchema>) {
+  const writeData = {
+    companyName: data.companyName,
+    logoUrl: data.logoUrl,
+    smtpHost: data.smtpHost,
+    smtpUser: data.smtpUser,
+    databaseNote: data.databaseNote,
+    defaultMessage: data.defaultMessage,
+    theme: data.theme,
+    apifyToken: data.apifyToken?.trim() || undefined,
+    openAiApiKey: data.openAiApiKey?.trim() || undefined,
+    smtpPassword: data.smtpPassword?.trim() || undefined
+  };
+
+  return Object.fromEntries(Object.entries(writeData).filter(([, value]) => value !== undefined));
+}
+
+function sanitizeSettings(settings: Record<string, unknown>) {
+  return {
+    ...settings,
+    apifyToken: "",
+    openAiApiKey: "",
+    smtpPassword: "",
+    apifyTokenConfigured: Boolean(settings.apifyToken),
+    openAiApiKeyConfigured: Boolean(settings.openAiApiKey),
+    smtpPasswordConfigured: Boolean(settings.smtpPassword)
+  };
+}
+
+function withDatabaseTimeout<T>(promise: Promise<T>, timeoutMs = 2500) {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error("DATABASE_TIMEOUT")), timeoutMs);
+    })
+  ]);
 }

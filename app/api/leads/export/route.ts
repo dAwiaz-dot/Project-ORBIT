@@ -2,16 +2,18 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isRbacError, rbacErrorResponse, requirePermission } from "@/lib/rbac";
 import { recordAudit } from "@/services/audit/audit.service";
+import { decodeDemoSearchCookie, listDemoLeads, listDemoLeadsFromFilters } from "@/services/demo/demo-store";
 import { buildCsv, buildLeadsWorkbook } from "@/services/export.service";
 import type { Lead } from "@/types/lead";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const format = url.searchParams.get("format") === "csv" ? "csv" : "xlsx";
+
   try {
     const user = await requirePermission("exports:create");
-    const url = new URL(request.url);
-    const format = url.searchParams.get("format") === "csv" ? "csv" : "xlsx";
 
     const dbLeads = await prisma.lead.findMany({
       include: { category: true },
@@ -57,26 +59,44 @@ export async function GET(request: Request) {
     });
 
     if (format === "csv") {
-      const csv = buildCsv(leads);
-      return new NextResponse(csv, {
-        headers: {
-          "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": "attachment; filename=orbit-leads.csv"
-        }
-      });
+      return buildCsvResponse(leads);
     }
 
-    const workbook = buildLeadsWorkbook(leads);
-    const buffer = await workbook.xlsx.writeBuffer();
-
-    return new NextResponse(new Uint8Array(buffer as ArrayBuffer), {
-      headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": "attachment; filename=orbit-leads.xlsx"
-      }
-    });
+    return buildXlsxResponse(leads);
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    return NextResponse.json({ error: "Nao foi possivel exportar os leads." }, { status: 500 });
+    const demoFilters = decodeDemoSearchCookie(getCookieValue(request.headers.get("cookie"), "orbit_demo_search"));
+    const demoResult = demoFilters ? listDemoLeadsFromFilters(demoFilters, { pageSize: 100 }) : listDemoLeads({ pageSize: 100 });
+    return format === "csv" ? buildCsvResponse(demoResult.leads) : buildXlsxResponse(demoResult.leads);
   }
+}
+
+function buildCsvResponse(leads: Lead[]) {
+  const csv = buildCsv(leads);
+  return new NextResponse(csv, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": "attachment; filename=orbit-leads.csv"
+    }
+  });
+}
+
+async function buildXlsxResponse(leads: Lead[]) {
+  const workbook = buildLeadsWorkbook(leads);
+  const buffer = await workbook.xlsx.writeBuffer();
+
+  return new NextResponse(new Uint8Array(buffer as ArrayBuffer), {
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": "attachment; filename=orbit-leads.xlsx"
+    }
+  });
+}
+
+function getCookieValue(header: string | null, name: string) {
+  return header
+    ?.split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
 }
