@@ -21,5 +21,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     role?: UserRole;
+    sessionExpiresAt?: number;
+    sessionExpired?: boolean;
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { authSecret } from "@/lib/auth-secret";
+import { isSessionExpired } from "@/lib/session-policy";
 
 const publicRoutes = new Set(["/login"]);
 
@@ -10,18 +11,26 @@ export async function middleware(request: NextRequest) {
     req: request,
     secret: authSecret
   });
+  const hasValidToken = Boolean(token && !isSessionExpired(token.sessionExpiresAt));
 
-  if (token && (pathname === "/" || pathname === "/login")) {
+  if (hasValidToken && (pathname === "/" || pathname === "/login")) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  if (!token && !publicRoutes.has(pathname)) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", `${request.nextUrl.pathname}${request.nextUrl.search}`);
-    return NextResponse.redirect(loginUrl);
+  if (!hasValidToken && !publicRoutes.has(pathname)) {
+    return redirectToLogin(request);
   }
 
   return NextResponse.next();
+}
+
+function redirectToLogin(request: NextRequest) {
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("callbackUrl", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+  const response = NextResponse.redirect(loginUrl);
+  response.cookies.delete("next-auth.session-token");
+  response.cookies.delete("__Secure-next-auth.session-token");
+  return response;
 }
 
 export const config = {

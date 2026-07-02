@@ -5,12 +5,17 @@ import { UserRole } from "@prisma/client";
 import { compare } from "bcryptjs";
 import { authSecret } from "@/lib/auth-secret";
 import { prisma } from "@/lib/prisma";
+import { createSessionExpiresAt, isSessionExpired, SESSION_MAX_AGE_SECONDS } from "@/lib/session-policy";
 
 export const authOptions: NextAuthOptions = {
   ...(process.env.DATABASE_URL ? { adapter: PrismaAdapter(prisma) } : {}),
   secret: authSecret,
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    maxAge: SESSION_MAX_AGE_SECONDS
+  },
+  jwt: {
+    maxAge: SESSION_MAX_AGE_SECONDS
   },
   pages: {
     signIn: "/login"
@@ -59,6 +64,14 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user && "role" in user) {
         token.role = user.role as UserRole;
+        token.sessionExpiresAt = createSessionExpiresAt();
+        token.sessionExpired = false;
+      }
+
+      if (isSessionExpired(token.sessionExpiresAt)) {
+        token.role = undefined;
+        token.sessionExpired = true;
+        return token;
       }
 
       if (!token.role && token.sub) {
@@ -78,10 +91,23 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
+      if (isSessionExpired(token.sessionExpiresAt)) {
+        return {
+          ...session,
+          expires: new Date(0).toISOString(),
+          user: {
+            ...session.user,
+            id: "",
+            role: UserRole.SELLER
+          }
+        };
+      }
+
       if (session.user && token.sub) {
         session.user.id = token.sub;
         session.user.role = token.role ?? "SELLER";
       }
+      session.expires = new Date(token.sessionExpiresAt as number).toISOString();
       return session;
     }
   }
