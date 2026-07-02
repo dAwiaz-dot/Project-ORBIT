@@ -3,6 +3,13 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { isRbacError, rbacErrorResponse, requirePermission } from "@/lib/rbac";
 import { recordAudit } from "@/services/audit/audit.service";
+import {
+  DEMO_SETTINGS_COOKIE_MAX_AGE_SECONDS,
+  DEMO_SETTINGS_COOKIE_NAME,
+  encodeDemoSettingsCookie,
+  getDemoSecretSettings,
+  mergeDemoSecretSettings
+} from "@/services/demo/settings-store";
 
 const settingsSchema = z.object({
   companyName: z.string().min(2).optional(),
@@ -31,7 +38,7 @@ const demoSettings = {
   updatedAt: new Date().toISOString()
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await requirePermission("settings:read");
     const settings =
@@ -46,7 +53,8 @@ export async function GET() {
     return NextResponse.json(sanitizeSettings(settings));
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    return NextResponse.json(sanitizeSettings(demoSettings));
+    const demoSecrets = getDemoSecretSettings(request.headers.get("cookie"));
+    return NextResponse.json(sanitizeSettings({ ...demoSettings, ...demoSecrets }));
   }
 }
 
@@ -93,14 +101,22 @@ export async function PATCH(request: Request) {
     return NextResponse.json(sanitizeSettings(settings));
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    return NextResponse.json(
+    const demoSecrets = mergeDemoSecretSettings(request.headers.get("cookie"), {
+      apifyToken: parsed.data.apifyToken,
+      openAiApiKey: parsed.data.openAiApiKey,
+      smtpPassword: parsed.data.smtpPassword
+    });
+    const response = NextResponse.json(
       sanitizeSettings({
         ...demoSettings,
         ...writeData,
+        ...demoSecrets,
         id: "orbit-settings-demo",
         databaseNote: "Configuracoes mantidas apenas nesta demonstracao local porque o PostgreSQL nao esta rodando."
       })
     );
+    setDemoSettingsCookie(response, demoSecrets);
+    return response;
   }
 }
 
@@ -140,4 +156,13 @@ function withDatabaseTimeout<T>(promise: Promise<T>, timeoutMs = 2500) {
       setTimeout(() => reject(new Error("DATABASE_TIMEOUT")), timeoutMs);
     })
   ]);
+}
+
+function setDemoSettingsCookie(response: NextResponse, settings: ReturnType<typeof getDemoSecretSettings>) {
+  response.cookies.set(DEMO_SETTINGS_COOKIE_NAME, encodeDemoSettingsCookie(settings), {
+    path: "/",
+    maxAge: DEMO_SETTINGS_COOKIE_MAX_AGE_SECONDS,
+    sameSite: "lax",
+    httpOnly: true
+  });
 }

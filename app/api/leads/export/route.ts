@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isRbacError, rbacErrorResponse, requirePermission } from "@/lib/rbac";
 import { recordAudit } from "@/services/audit/audit.service";
-import { decodeDemoSearchCookie, listDemoLeads, listDemoLeadsFromFilters } from "@/services/demo/demo-store";
+import { listDemoLeads } from "@/services/demo/demo-store";
 import { buildCsv, buildLeadsWorkbook } from "@/services/export.service";
 import type { Lead } from "@/types/lead";
 
@@ -65,8 +65,7 @@ export async function GET(request: Request) {
     return buildXlsxResponse(leads);
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    const demoFilters = decodeDemoSearchCookie(getCookieValue(request.headers.get("cookie"), "orbit_demo_search"));
-    const demoResult = demoFilters ? listDemoLeadsFromFilters(demoFilters, { pageSize: 100 }) : listDemoLeads({ pageSize: 100 });
+    const demoResult = listDemoLeads({ pageSize: 100 });
     return format === "csv" ? buildCsvResponse(demoResult.leads) : buildXlsxResponse(demoResult.leads);
   }
 }
@@ -91,12 +90,4 @@ async function buildXlsxResponse(leads: Lead[]) {
       "Content-Disposition": "attachment; filename=orbit-leads.xlsx"
     }
   });
-}
-
-function getCookieValue(header: string | null, name: string) {
-  return header
-    ?.split(";")
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(`${name}=`))
-    ?.slice(name.length + 1);
 }

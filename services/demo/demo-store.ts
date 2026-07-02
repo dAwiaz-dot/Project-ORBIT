@@ -38,8 +38,12 @@ const defaultDemoUser: DemoUser = {
   email: "davi@orbit.local"
 };
 
-export function createDemoSearchJob(filters: LeadSearchFilters, user: DemoUser | null = defaultDemoUser) {
-  const rawLeads = generateDemoLeads(filters);
+export function createDemoSearchJobFromLeads(
+  filters: LeadSearchFilters,
+  rawLeads: Lead[],
+  user: DemoUser | null = defaultDemoUser,
+  source = "Apify"
+) {
   const leads = filterLeads(rawLeads, filters);
   const duplicates = mergeDemoLeads(leads);
   const now = new Date().toISOString();
@@ -54,7 +58,7 @@ export function createDemoSearchJob(filters: LeadSearchFilters, user: DemoUser |
     minRating: filters.minRating,
     minReviews: filters.minReviews,
     progress: 100,
-    message: `Modo demonstracao: ${leads.length} leads gerados para apresentacao.`,
+    message: `${source}: ${leads.length} leads reais salvos para ${filters.category} em ${filters.city}.`,
     resultCount: leads.length,
     duplicateCount: duplicates,
     error: null,
@@ -69,43 +73,31 @@ export function createDemoSearchJob(filters: LeadSearchFilters, user: DemoUser |
   return job;
 }
 
-export function generateDemoLeads(filters: LeadSearchFilters): Lead[] {
-  const count = Math.max(1, Math.min(filters.maxResults || 12, 24));
-  const names = ["Aurora", "Prime", "Alfa", "Nobre", "Viva", "Lumi", "Essencial", "Bella", "Delta", "Serra", "Central", "Mais"];
-  const suffixes = ["Studio", "Center", "Clinic", "House", "Pro", "Digital", "Premium", "Hub"];
-  const minRating = Math.max(0, Math.min(5, filters.minRating || 0));
-  const minReviews = Math.max(0, filters.minReviews || 0);
+export function createDemoFailedSearchJob(filters: LeadSearchFilters, error: string, user: DemoUser | null = defaultDemoUser) {
   const now = new Date().toISOString();
+  const job: SearchJobDto = {
+    id: `demo-job-${Date.now()}`,
+    status: "FAILED",
+    state: filters.state,
+    city: filters.city,
+    category: filters.category,
+    maxResults: filters.maxResults,
+    minRating: filters.minRating,
+    minReviews: filters.minReviews,
+    progress: 100,
+    message: "Busca falhou",
+    resultCount: 0,
+    duplicateCount: 0,
+    error,
+    startedAt: now,
+    completedAt: now,
+    createdAt: now,
+    updatedAt: now,
+    user
+  };
 
-  return Array.from({ length: count }, (_, index) => {
-    const phoneRequired = filters.onlyWithPhone || filters.onlyWithWhatsApp || index % 5 !== 0;
-    const phone = phoneRequired ? buildPhone(index) : null;
-    const hasWhatsApp = Boolean(phone) && (filters.onlyWithWhatsApp || index % 3 !== 0);
-    const rating = Math.min(5, Math.max(minRating, 4 + ((index + 2) % 9) / 10));
-    const reviewCount = Math.max(minReviews, 24) + index * 11;
-    const company = `${filters.category} ${names[index % names.length]} ${suffixes[index % suffixes.length]}`;
-    const website = filters.onlyWithoutWebsite || index % 4 !== 0 ? null : `https://${slug(company)}.com.br`;
-
-    return {
-      id: `demo-lead-${slug(filters.state)}-${slug(filters.city)}-${slug(filters.category)}-${index}`,
-      company,
-      phone,
-      address: `Rua Orbit, ${120 + index} - Centro`,
-      city: filters.city,
-      state: filters.state,
-      website,
-      instagram: index % 4 === 1 ? null : `@${slug(company).replaceAll("-", "")}`,
-      googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${company} ${filters.city}`)}`,
-      category: filters.category,
-      rating: Number(rating.toFixed(1)),
-      reviewCount,
-      latitude: -22.226 + index * 0.004,
-      longitude: -45.938 - index * 0.004,
-      hasWhatsApp,
-      status: "NEW",
-      createdAt: now
-    };
-  });
+  demoState.jobs = [job, ...demoState.jobs.filter((item) => item.id !== job.id)].slice(0, 25);
+  return job;
 }
 
 export function listDemoSearchJobs() {
@@ -116,76 +108,8 @@ export function getDemoSearchJob(id: string) {
   return demoState.jobs.find((job) => job.id === id) ?? null;
 }
 
-export function getDemoSearchJobFromFilters(id: string, filters: LeadSearchFilters, user: DemoUser | null = defaultDemoUser) {
-  const leads = filterLeads(generateDemoLeads(filters), filters);
-  const now = new Date().toISOString();
-
-  return {
-    id,
-    status: "SUCCEEDED",
-    state: filters.state,
-    city: filters.city,
-    category: filters.category,
-    maxResults: filters.maxResults,
-    minRating: filters.minRating,
-    minReviews: filters.minReviews,
-    progress: 100,
-    message: `Modo demonstracao: ${leads.length} leads gerados para apresentacao.`,
-    resultCount: leads.length,
-    duplicateCount: 0,
-    error: null,
-    startedAt: now,
-    completedAt: now,
-    createdAt: now,
-    updatedAt: now,
-    user
-  } satisfies SearchJobDto;
-}
-
 export function listDemoLeads(query: DemoLeadQuery = {}): PaginatedLeadsResult {
   return paginateLeads(demoState.leads, query);
-}
-
-export function listDemoLeadsFromFilters(filters: LeadSearchFilters, query: DemoLeadQuery = {}) {
-  const leads = filterLeads(generateDemoLeads(filters), filters);
-  return paginateLeads(leads, query);
-}
-
-export function getDemoLeadFromFilters(filters: LeadSearchFilters, id: string) {
-  return filterLeads(generateDemoLeads(filters), filters).find((lead) => lead.id === id) ?? null;
-}
-
-export function getDemoLeadDetailsFromFilters(filters: LeadSearchFilters, id: string): LeadDetail | null {
-  const lead = getDemoLeadFromFilters(filters, id);
-  return lead ? buildDemoLeadDetails(lead) : null;
-}
-
-export function encodeDemoSearchCookie(filters: LeadSearchFilters) {
-  return Buffer.from(JSON.stringify(filters), "utf8").toString("base64url");
-}
-
-export function decodeDemoSearchCookie(value: string | undefined | null) {
-  if (!value) return null;
-
-  try {
-    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Partial<LeadSearchFilters>;
-    if (!parsed.state || !parsed.city || !parsed.category) return null;
-
-    return {
-      state: String(parsed.state),
-      city: String(parsed.city),
-      category: String(parsed.category),
-      maxResults: Number(parsed.maxResults ?? 24),
-      minRating: Number(parsed.minRating ?? 0),
-      minReviews: Number(parsed.minReviews ?? 0),
-      onlyWithoutWebsite: Boolean(parsed.onlyWithoutWebsite),
-      onlyWithPhone: Boolean(parsed.onlyWithPhone),
-      onlyWithWhatsApp: Boolean(parsed.onlyWithWhatsApp),
-      ignoreDuplicates: parsed.ignoreDuplicates !== false
-    } satisfies LeadSearchFilters;
-  } catch {
-    return null;
-  }
 }
 
 function paginateLeads(source: Lead[], query: DemoLeadQuery = {}): PaginatedLeadsResult {
@@ -279,18 +203,4 @@ function mergeDemoLeads(leads: Lead[]) {
 
 function getLeadKey(lead: Lead) {
   return [lead.company.trim().toLowerCase(), lead.phone ?? "", lead.city.toLowerCase()].join("|");
-}
-
-function buildPhone(index: number) {
-  const suffix = String(1100 + index * 37).padStart(4, "0").slice(-4);
-  return `55359${8200 + index}${suffix}`;
-}
-
-function slug(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
 }

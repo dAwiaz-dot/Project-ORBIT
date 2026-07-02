@@ -1,19 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isRbacError, rbacErrorResponse, requirePermission } from "@/lib/rbac";
+import { ApifyGoogleMapsService } from "@/services/apify.service";
 import {
-  createDemoSearchJob,
-  decodeDemoSearchCookie,
-  encodeDemoSearchCookie,
-  getDemoSearchJobFromFilters,
+  createDemoFailedSearchJob,
+  createDemoSearchJobFromLeads,
   listDemoSearchJobs
 } from "@/services/demo/demo-store";
+import { getDemoSecretSettings } from "@/services/demo/settings-store";
 import { recordAudit } from "@/services/audit/audit.service";
-import { createSearchJob, processSearchJob, searchJobSchema, toSearchJobDto } from "@/services/search-jobs/search-job.service";
+import {
+  createSearchJob,
+  processSearchJob,
+  searchJobSchema,
+  toSearchJobDto,
+  type SearchJobInput
+} from "@/services/search-jobs/search-job.service";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     await requirePermission("searchJobs:read");
 
@@ -27,8 +33,7 @@ export async function GET(request: Request) {
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
     const jobs = listDemoSearchJobs();
-    const demoFilters = decodeDemoSearchCookie(getCookieValue(request.headers.get("cookie"), "orbit_demo_search"));
-    return NextResponse.json({ jobs: jobs.length ? jobs : demoFilters ? [getDemoSearchJobFromFilters("demo-last-search", demoFilters)] : [] });
+    return NextResponse.json({ jobs });
   }
 }
 
@@ -57,21 +62,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ job: toSearchJobDto(job) }, { status: 202 });
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    const job = createDemoSearchJob(parsed.data, { id: "development-admin-davi", name: "Davi", email: "davi@orbit.local" });
-    const response = NextResponse.json({ job }, { status: 202 });
-    response.cookies.set("orbit_demo_search", encodeDemoSearchCookie(parsed.data), {
-      path: "/",
-      maxAge: 60 * 60 * 24,
-      sameSite: "lax"
-    });
-    return response;
+    return createFallbackApifySearch(request, parsed.data);
   }
 }
 
-function getCookieValue(header: string | null, name: string) {
-  return header
-    ?.split(";")
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(`${name}=`))
-    ?.slice(name.length + 1);
+async function createFallbackApifySearch(request: Request, filters: SearchJobInput) {
+  const token = getDemoSecretSettings(request.headers.get("cookie")).apifyToken || process.env.APIFY_TOKEN || "";
+  const user = { id: "development-admin-davi", name: "Davi", email: "davi@orbit.local" };
+
+  if (!token) {
+    const message = "Apify Token nao configurado. Salve o token em Configuracoes para buscar leads reais.";
+    const job = createDemoFailedSearchJob(filters, message, user);
+    return NextResponse.json({ error: message, job }, { status: 400 });
+  }
+
+  try {
+    const rawLeads = await new ApifyGoogleMapsService(token).search(filters);
+    const job = createDemoSearchJobFromLeads(filters, rawLeads, user, "Apify");
+    return NextResponse.json({ job }, { status: 202 });
+  } catch (apifyError) {
+    const message = apifyError instanceof Error ? apifyError.message : "Falha ao buscar leads reais na Apify.";
+    const job = createDemoFailedSearchJob(filters, message, user);
+    return NextResponse.json({ error: message, job }, { status: 502 });
+  }
 }

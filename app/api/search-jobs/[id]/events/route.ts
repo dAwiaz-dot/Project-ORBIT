@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { isRbacError, rbacErrorResponse, requirePermission } from "@/lib/rbac";
-import { decodeDemoSearchCookie, getDemoSearchJob, getDemoSearchJobFromFilters } from "@/services/demo/demo-store";
+import { getDemoSearchJob } from "@/services/demo/demo-store";
 import { toSearchJobDto } from "@/services/search-jobs/search-job.service";
 
 export const runtime = "nodejs";
@@ -61,8 +61,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
     const { id } = await params;
-    const demoFilters = decodeDemoSearchCookie(getCookieValue(request.headers.get("cookie"), "orbit_demo_search"));
-    const demoJob = getDemoSearchJob(id) ?? (demoFilters ? getDemoSearchJobFromFilters(id, demoFilters) : { error: "Busca nao encontrada." });
+    const demoJob = getDemoSearchJob(id) ?? { error: "Busca nao encontrada." };
 
     return new Response(`data: ${JSON.stringify(demoJob)}\n\n`, {
       headers: {
@@ -72,12 +71,4 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       }
     });
   }
-}
-
-function getCookieValue(header: string | null, name: string) {
-  return header
-    ?.split(";")
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(`${name}=`))
-    ?.slice(name.length + 1);
 }

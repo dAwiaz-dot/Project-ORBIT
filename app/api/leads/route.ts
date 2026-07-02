@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { LeadRepository } from "@/repositories/lead.repository";
-import { decodeDemoSearchCookie, listDemoLeadsFromFilters } from "@/services/demo/demo-store";
 import type { LeadStatus } from "@/types/lead";
 
 export async function GET(request: Request) {
@@ -18,15 +17,5 @@ export async function GET(request: Request) {
   };
 
   const result = await new LeadRepository().list(query);
-  const demoFilters = decodeDemoSearchCookie(getCookieValue(request.headers.get("cookie"), "orbit_demo_search"));
-
-  return NextResponse.json(result.total === 0 && demoFilters ? listDemoLeadsFromFilters(demoFilters, query) : result);
-}
-
-function getCookieValue(header: string | null, name: string) {
-  return header
-    ?.split(";")
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(`${name}=`))
-    ?.slice(name.length + 1);
+  return NextResponse.json(result);
 }

@@ -3,7 +3,6 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ApifyGoogleMapsService } from "@/services/apify.service";
 import { recordAudit } from "@/services/audit/audit.service";
-import { generateDemoLeads } from "@/services/demo/demo-store";
 import { filterLeads } from "@/services/lead-filter.service";
 import type { Lead, LeadSearchFilters } from "@/types/lead";
 import type { SearchJobDto } from "@/types/search-job";
@@ -21,7 +20,7 @@ export const searchJobSchema = z.object({
   ignoreDuplicates: z.boolean().default(true)
 });
 
-type SearchJobInput = z.infer<typeof searchJobSchema>;
+export type SearchJobInput = z.infer<typeof searchJobSchema>;
 type JobWithUser = Prisma.SearchJobGetPayload<{
   include: { user: { select: { id: true; name: true; email: true } } };
 }>;
@@ -90,15 +89,13 @@ export async function processSearchJob(jobId: string) {
 
     const settings = await prisma.appSettings.findFirst({ select: { apifyToken: true } });
     const token = settings?.apifyToken?.trim() || process.env.APIFY_TOKEN || "";
-    let rawLeads: Lead[];
-    if (token) {
-      const service = new ApifyGoogleMapsService(token);
-      await updateJob(jobId, { progress: 25, message: "Coletando empresas no Google Maps" });
-      rawLeads = await service.search(filters);
-    } else {
-      await updateJob(jobId, { progress: 25, message: "Apify nao configurada. Gerando leads de apresentacao" });
-      rawLeads = generateDemoLeads(filters);
+    if (!token) {
+      throw new Error("Apify Token nao configurado. Cadastre o token em Configuracoes para buscar leads reais.");
     }
+
+    const service = new ApifyGoogleMapsService(token);
+    await updateJob(jobId, { progress: 25, message: "Coletando empresas reais no Google Maps via Apify" });
+    const rawLeads = await service.search(filters);
 
     await updateJob(jobId, { progress: 65, message: "Aplicando filtros e removendo duplicados" });
     const leads = filterLeads(rawLeads, filters);

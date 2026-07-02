@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isRbacError, rbacErrorResponse, requirePermission } from "@/lib/rbac";
-import { decodeDemoSearchCookie, getDemoSearchJob, getDemoSearchJobFromFilters } from "@/services/demo/demo-store";
+import { getDemoSearchJob } from "@/services/demo/demo-store";
 import { toSearchJobDto } from "@/services/search-jobs/search-job.service";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -21,8 +21,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
     const { id } = await params;
-    const demoFilters = decodeDemoSearchCookie(getCookieValue(_request.headers.get("cookie"), "orbit_demo_search"));
-    const job = getDemoSearchJob(id) ?? (demoFilters ? getDemoSearchJobFromFilters(id, demoFilters) : null);
+    const job = getDemoSearchJob(id);
     if (!job) {
       return NextResponse.json({ error: "Busca nao encontrada." }, { status: 404 });
     }
@@ -31,12 +30,4 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       job
     });
   }
-}
-
-function getCookieValue(header: string | null, name: string) {
-  return header
-    ?.split(";")
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(`${name}=`))
-    ?.slice(name.length + 1);
 }

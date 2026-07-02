@@ -23,7 +23,7 @@ Orbit Leads e um SaaS premium de prospeccao para agencias de marketing. O produt
 ```txt
 app/                  Rotas do Next.js e API routes
 components/           Layout, UI, formularios, graficos e tabela de leads
-data/                 Dados iniciais para categorias, cidades e mock premium
+data/                 Dados iniciais para categorias, cidades e estados vazios de dashboard
 hooks/                Hooks reutilizaveis
 lib/                  Prisma, auth e utilitarios base
 models/               Mapeamentos de dominio
@@ -85,7 +85,7 @@ O seed cria:
 - cidades iniciais do Sul de Minas
 - mensagem padrao
 - configuracoes da empresa
-- leads demonstrativos
+- base de leads limpa, pronta para receber buscas reais da Apify
 - regras de automacao iniciais
 
 ## Login
@@ -114,6 +114,8 @@ Fluxo:
 5. Aplica filtros locais.
 6. Salva leads no PostgreSQL.
 7. Registra a busca no historico.
+
+Sem `APIFY_TOKEN`, a busca falha com uma mensagem clara e nao gera leads ficticios. Em modo local sem PostgreSQL, o token salvo em Configuracoes fica criptografado em cookie httpOnly apenas para demonstracao; em producao, configure `DATABASE_URL`, `NEXTAUTH_SECRET` e `APIFY_TOKEN` no ambiente.
 
 Campos salvos:
 
@@ -271,11 +273,8 @@ A IA atual usa um motor local de scoring para funcionar sem dependencia externa.
 
 ## Proximas etapas recomendadas
 
-1. Conectar a tabela de leads ao endpoint real em vez do mock local.
-2. Adicionar RBAC completo para equipe.
-3. Criar pagina de detalhe do lead.
-4. Adicionar importacao manual de planilhas.
-5. Criar fila de buscas Apify com status em tempo real.
-6. Adicionar logs de auditoria por usuario.
-7. Implementar upload de logo em storage externo.
-8. Adicionar testes automatizados para filtros, exportacao e WhatsApp.
+1. Configurar PostgreSQL real no deploy para persistir leads, equipe, auditoria e configuracoes.
+2. Configurar `APIFY_TOKEN` real no Vercel ou salvar o token nas Configuracoes com o banco ativo.
+3. Implementar storage externo definitivo para upload de logo em producao.
+4. Trocar o motor local de IA pelo provider OpenAI quando `OPENAI_API_KEY` estiver configurado.
+5. Expandir testes end-to-end com uma conta Apify de homologacao.
