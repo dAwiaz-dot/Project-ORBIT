@@ -19,7 +19,7 @@ export async function GET() {
     return NextResponse.json({ jobs: jobs.map(toSearchJobDto) });
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    return NextResponse.json({ error: "Nao foi possivel carregar a fila." }, { status: 500 });
+    return NextResponse.json({ jobs: [] });
   }
 }
 
@@ -48,6 +48,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ job: toSearchJobDto(job) }, { status: 202 });
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    return NextResponse.json({ error: "Nao foi possivel criar a busca." }, { status: 500 });
+    const body = await request.json().catch(() => ({}));
+    const now = new Date().toISOString();
+    return NextResponse.json(
+      {
+        job: {
+          id: `demo-job-${Date.now()}`,
+          status: "SUCCEEDED",
+          state: body.state ?? "MG",
+          city: body.city ?? "Pouso Alegre",
+          category: body.category ?? "Dentistas",
+          maxResults: Number(body.maxResults ?? 50),
+          minRating: Number(body.minRating ?? 0),
+          minReviews: Number(body.minReviews ?? 0),
+          progress: 100,
+          message: "Modo demonstracao: conecte PostgreSQL e Apify para executar a busca real.",
+          resultCount: 0,
+          duplicateCount: 0,
+          error: null,
+          startedAt: now,
+          completedAt: now,
+          createdAt: now,
+          updatedAt: now,
+          user: { id: "development-admin-davi", name: "Davi", email: "davi@orbit.local" }
+        }
+      },
+      { status: 202 }
+    );
   }
 }

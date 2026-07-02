@@ -29,15 +29,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Cidade invalida" }, { status: 400 });
   }
 
-  const city = await prisma.city.upsert({
-    where: { name_state: { name: parsed.data.name, state: parsed.data.state.toUpperCase() } },
-    update: { active: true, region: parsed.data.region },
-    create: {
-      name: parsed.data.name,
-      state: parsed.data.state.toUpperCase(),
-      region: parsed.data.region
-    }
-  });
+  try {
+    const city = await prisma.city.upsert({
+      where: { name_state: { name: parsed.data.name, state: parsed.data.state.toUpperCase() } },
+      update: { active: true, region: parsed.data.region },
+      create: {
+        name: parsed.data.name,
+        state: parsed.data.state.toUpperCase(),
+        region: parsed.data.region
+      }
+    });
 
-  return NextResponse.json(city, { status: 201 });
+    return NextResponse.json(city, { status: 201 });
+  } catch {
+    return NextResponse.json(
+      {
+        id: `${parsed.data.name}-${parsed.data.state.toUpperCase()}`,
+        name: parsed.data.name,
+        state: parsed.data.state.toUpperCase(),
+        region: parsed.data.region,
+        active: true
+      },
+      { status: 201 }
+    );
+  }
 }

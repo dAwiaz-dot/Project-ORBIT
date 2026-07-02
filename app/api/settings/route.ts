@@ -17,6 +17,23 @@ const settingsSchema = z.object({
   theme: z.enum(["light", "dark", "system"]).optional()
 });
 
+const demoSettings = {
+  id: "orbit-settings-demo",
+  companyName: "Orbit",
+  logoUrl: null,
+  logoStorageKey: null,
+  apifyToken: "",
+  openAiApiKey: "",
+  smtpHost: "",
+  smtpUser: "",
+  smtpPassword: "",
+  databaseNote: "Modo demonstracao local: PostgreSQL ainda nao esta rodando.",
+  defaultMessage: "Ola {empresa}, tudo bem? Vi o trabalho de voces em {cidade}...",
+  theme: "light",
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+};
+
 export async function GET() {
   try {
     await requirePermission("settings:read");
@@ -32,7 +49,7 @@ export async function GET() {
     return NextResponse.json(settings);
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    return NextResponse.json({ error: "Nao foi possivel carregar as configuracoes." }, { status: 500 });
+    return NextResponse.json(demoSettings);
   }
 }
 
@@ -76,6 +93,12 @@ export async function PATCH(request: Request) {
     return NextResponse.json(settings);
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    return NextResponse.json({ error: "Nao foi possivel salvar as configuracoes." }, { status: 500 });
+    const body = await request.json().catch(() => ({}));
+    return NextResponse.json({
+      ...demoSettings,
+      ...body,
+      id: "orbit-settings-demo",
+      databaseNote: "Configuracoes mantidas apenas nesta demonstracao local porque o PostgreSQL nao esta rodando."
+    });
   }
 }

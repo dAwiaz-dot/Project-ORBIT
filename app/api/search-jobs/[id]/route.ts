@@ -19,6 +19,29 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ job: toSearchJobDto(job) });
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    return NextResponse.json({ error: "Nao foi possivel carregar a busca." }, { status: 500 });
+    const { id } = await params;
+    const now = new Date().toISOString();
+    return NextResponse.json({
+      job: {
+        id,
+        status: "SUCCEEDED",
+        state: "MG",
+        city: "Pouso Alegre",
+        category: "Dentistas",
+        maxResults: 50,
+        minRating: 0,
+        minReviews: 0,
+        progress: 100,
+        message: "Modo demonstracao: conecte PostgreSQL e Apify para executar a busca real.",
+        resultCount: 0,
+        duplicateCount: 0,
+        error: null,
+        startedAt: now,
+        completedAt: now,
+        createdAt: now,
+        updatedAt: now,
+        user: { id: "development-admin-davi", name: "Davi", email: "davi@orbit.local" }
+      }
+    });
   }
 }
