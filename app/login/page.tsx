@@ -86,7 +86,7 @@ export default function LoginPage() {
                 <Label htmlFor="login">Login</Label>
                 <div className="relative">
                   <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="login" name="login" type="text" autoComplete="username" className="pl-9" defaultValue="Davi" required />
+                  <Input id="login" name="login" type="text" autoComplete="username" className="pl-9" placeholder="Seu login" required />
                 </div>
               </div>
               <div className="space-y-2">
@@ -104,7 +104,7 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     className="px-9"
-                    defaultValue="110391"
+                    placeholder="Sua senha"
                     required
                   />
                   <button

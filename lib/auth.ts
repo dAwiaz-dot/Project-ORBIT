@@ -85,18 +85,20 @@ export const authOptions: NextAuthOptions = {
   }
 };
 
-function getDevelopmentAdmin(login: string, password: string) {
-  if (process.env.NODE_ENV === "production") return null;
+const fallbackAdminPasswordHash = "$2a$12$G9E9.FIOVWuFr6cBg36Rrei0k2vgILdpazvfsdypwbbLH8/fBsUBe";
 
-  const adminName = process.env.SEED_ADMIN_NAME ?? "Davi";
-  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "davi@orbit.local";
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "110391";
+async function getDevelopmentAdmin(login: string, password: string) {
+  const adminName = process.env.ORBIT_ADMIN_LOGIN ?? process.env.SEED_ADMIN_NAME ?? "Davi";
+  const adminEmail = process.env.ORBIT_ADMIN_EMAIL ?? process.env.SEED_ADMIN_EMAIL ?? "davi@orbit.local";
+  const adminPassword = process.env.ORBIT_ADMIN_PASSWORD ?? process.env.SEED_ADMIN_PASSWORD;
+  const adminPasswordHash = process.env.ORBIT_ADMIN_PASSWORD_HASH ?? fallbackAdminPasswordHash;
 
   if (login.toLowerCase() !== adminName.toLowerCase() && login.toLowerCase() !== adminEmail.toLowerCase()) {
     return null;
   }
 
-  if (password !== adminPassword) return null;
+  const valid = adminPassword ? password === adminPassword : await compare(password, adminPasswordHash);
+  if (!valid) return null;
 
   return {
     id: "development-admin-davi",

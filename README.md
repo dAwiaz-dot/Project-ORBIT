@@ -56,7 +56,10 @@ SMTP_USER=""
 SMTP_PASSWORD=""
 SEED_ADMIN_NAME="Davi"
 SEED_ADMIN_EMAIL="davi@orbit.local"
-SEED_ADMIN_PASSWORD="110391"
+SEED_ADMIN_PASSWORD="troque-esta-senha"
+ORBIT_ADMIN_LOGIN="Davi"
+ORBIT_ADMIN_EMAIL="davi@orbit.local"
+ORBIT_ADMIN_PASSWORD="troque-esta-senha"
 ```
 
 ## Banco PostgreSQL
@@ -91,7 +94,7 @@ Com o seed padrao:
 
 ```txt
 Login: Davi
-Senha: 110391
+Senha: definida em `ORBIT_ADMIN_PASSWORD` no ambiente de deploy ou no seed local.
 
 Em desenvolvimento, se o PostgreSQL ainda nao estiver rodando, o login acima tambem funciona como fallback local para apresentacao. Em producao, crie o usuario real com o seed e mantenha o banco PostgreSQL ativo.
 ```
