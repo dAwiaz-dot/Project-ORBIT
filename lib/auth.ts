@@ -6,6 +6,7 @@ import { compare } from "bcryptjs";
 import { authSecret } from "@/lib/auth-secret";
 import { prisma } from "@/lib/prisma";
 import { createSessionExpiresAt, isSessionExpired, SESSION_MAX_AGE_SECONDS } from "@/lib/session-policy";
+import { authenticateDemoTeamUser } from "@/services/demo/team-store";
 
 export const authOptions: NextAuthOptions = {
   ...(process.env.DATABASE_URL ? { adapter: PrismaAdapter(prisma) } : {}),
@@ -27,9 +28,10 @@ export const authOptions: NextAuthOptions = {
         login: { label: "Login", type: "text" },
         password: { label: "Senha", type: "password" }
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.login || !credentials.password) return null;
         const login = credentials.login.trim();
+        const cookieHeader = request.headers?.cookie;
 
         try {
           const user = await prisma.user.findFirst({
@@ -41,7 +43,9 @@ export const authOptions: NextAuthOptions = {
             }
           });
 
-          if (!user?.passwordHash) return getDevelopmentAdmin(login, credentials.password);
+          if (!user?.passwordHash) {
+            return (await authenticateDemoTeamUser(login, credentials.password, cookieHeader)) ?? getDevelopmentAdmin(login, credentials.password);
+          }
 
           const valid = await compare(credentials.password, user.passwordHash);
           if (!valid) return null;
@@ -55,7 +59,7 @@ export const authOptions: NextAuthOptions = {
           };
         } catch (error) {
           console.error("Falha ao autenticar via banco", error);
-          return getDevelopmentAdmin(login, credentials.password);
+          return (await authenticateDemoTeamUser(login, credentials.password, cookieHeader)) ?? getDevelopmentAdmin(login, credentials.password);
         }
       }
     })

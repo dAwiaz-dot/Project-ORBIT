@@ -71,7 +71,10 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     role: session.user.role
   };
   const canUseSessionFallback =
-    session.user.id === "development-admin-davi" || process.env.NODE_ENV !== "production" || !process.env.DATABASE_URL;
+    session.user.id === "development-admin-davi" ||
+    session.user.id.startsWith("demo-user-") ||
+    process.env.NODE_ENV !== "production" ||
+    !process.env.DATABASE_URL;
 
   try {
     const dbUser = await prisma.user.findUnique({

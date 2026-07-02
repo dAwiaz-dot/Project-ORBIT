@@ -5,6 +5,15 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { isRbacError, rbacErrorResponse, requirePermission } from "@/lib/rbac";
 import { recordAudit } from "@/services/audit/audit.service";
+import {
+  deleteDemoTeamUser,
+  DEMO_TEAM_COOKIE_MAX_AGE_SECONDS,
+  DEMO_TEAM_COOKIE_NAME,
+  encodeDemoTeamCookie,
+  hydrateDemoTeamUsersFromCookie,
+  isDemoTeamError,
+  updateDemoTeamUser
+} from "@/services/demo/team-store";
 
 const updateUserSchema = z.object({
   name: z.string().min(2).optional(),
@@ -14,15 +23,16 @@ const updateUserSchema = z.object({
 });
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const body = await request.json().catch(() => ({}));
+  const parsed = updateUserSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados invalidos", details: parsed.error.flatten() }, { status: 400 });
+  }
+
   try {
     const actor = await requirePermission("team:write");
-    const { id } = await params;
-    const body = await request.json();
-    const parsed = updateUserSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Dados invalidos", details: parsed.error.flatten() }, { status: 400 });
-    }
 
     if (parsed.data.role && parsed.data.role !== UserRole.ADMIN) {
       const targetUser = await prisma.user.findUnique({
@@ -81,28 +91,29 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json({ error: "Este email ja esta cadastrado." }, { status: 409 });
     }
-
-    const { id } = await params;
-    const body = await request.json().catch(() => ({}));
-    return NextResponse.json({
-      user: {
-        id,
-        name: body.name ?? "Davi",
-        email: body.email ?? "davi@orbit.local",
-        role: body.role ?? UserRole.ADMIN,
-        image: null,
-        hasPassword: Boolean(body.password),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+    try {
+      hydrateDemoTeamUsersFromCookie(request.headers.get("cookie"));
+      const user = await updateDemoTeamUser(id, parsed.data);
+      const response = NextResponse.json({ user });
+      setDemoTeamCookie(response);
+      return response;
+    } catch (demoError) {
+      if (isDemoTeamError(demoError)) {
+        return NextResponse.json({ error: demoError.message }, { status: demoError.status });
       }
-    });
+
+      return NextResponse.json({ error: "Nao foi possivel atualizar o usuario." }, { status: 500 });
+    }
   }
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  let actorId: string | null = null;
+
   try {
     const actor = await requirePermission("team:write");
-    const { id } = await params;
+    actorId = actor.id;
 
     if (actor.id === id) {
       return NextResponse.json({ error: "Voce nao pode remover seu proprio acesso." }, { status: 400 });
@@ -143,6 +154,26 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    return NextResponse.json({ ok: true });
+    try {
+      hydrateDemoTeamUsersFromCookie(request.headers.get("cookie"));
+      deleteDemoTeamUser(id, actorId);
+    } catch (demoError) {
+      if (isDemoTeamError(demoError)) {
+        return NextResponse.json({ error: demoError.message }, { status: demoError.status });
+      }
+    }
+
+    const response = NextResponse.json({ ok: true });
+    setDemoTeamCookie(response);
+    return response;
   }
+}
+
+function setDemoTeamCookie(response: NextResponse) {
+  response.cookies.set(DEMO_TEAM_COOKIE_NAME, encodeDemoTeamCookie(), {
+    path: "/",
+    maxAge: DEMO_TEAM_COOKIE_MAX_AGE_SECONDS,
+    sameSite: "lax",
+    httpOnly: true
+  });
 }

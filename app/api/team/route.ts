@@ -5,6 +5,15 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { isRbacError, rbacErrorResponse, requirePermission } from "@/lib/rbac";
 import { recordAudit } from "@/services/audit/audit.service";
+import {
+  createDemoTeamUser,
+  DEMO_TEAM_COOKIE_MAX_AGE_SECONDS,
+  DEMO_TEAM_COOKIE_NAME,
+  encodeDemoTeamCookie,
+  hydrateDemoTeamUsersFromCookie,
+  isDemoTeamError,
+  listDemoTeamUsers
+} from "@/services/demo/team-store";
 
 const createUserSchema = z.object({
   name: z.string().min(2),
@@ -13,20 +22,7 @@ const createUserSchema = z.object({
   role: z.nativeEnum(UserRole)
 });
 
-const demoUsers = [
-  {
-    id: "development-admin-davi",
-    name: "Davi",
-    email: "davi@orbit.local",
-    role: UserRole.ADMIN,
-    image: null,
-    hasPassword: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await requirePermission("team:read");
     const users = await prisma.user.findMany({
@@ -57,19 +53,21 @@ export async function GET() {
     });
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    return NextResponse.json({ users: demoUsers });
+    hydrateDemoTeamUsersFromCookie(request.headers.get("cookie"));
+    return NextResponse.json({ users: listDemoTeamUsers() });
   }
 }
 
 export async function POST(request: Request) {
+  const body = await request.json().catch(() => ({}));
+  const parsed = createUserSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados invalidos", details: parsed.error.flatten() }, { status: 400 });
+  }
+
   try {
     const actor = await requirePermission("team:write");
-    const body = await request.json();
-    const parsed = createUserSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Dados invalidos", details: parsed.error.flatten() }, { status: 400 });
-    }
 
     const user = await prisma.user.create({
       data: {
@@ -110,22 +108,27 @@ export async function POST(request: Request) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json({ error: "Este email ja esta cadastrado." }, { status: 409 });
     }
+    try {
+      hydrateDemoTeamUsersFromCookie(request.headers.get("cookie"));
+      const user = await createDemoTeamUser(parsed.data);
+      const response = NextResponse.json({ user }, { status: 201 });
+      setDemoTeamCookie(response);
+      return response;
+    } catch (demoError) {
+      if (isDemoTeamError(demoError)) {
+        return NextResponse.json({ error: demoError.message }, { status: demoError.status });
+      }
 
-    const body = await request.json().catch(() => ({}));
-    return NextResponse.json(
-      {
-        user: {
-          id: `demo-${Date.now()}`,
-          name: body.name ?? "Usuario demo",
-          email: body.email ?? "demo@orbit.local",
-          role: body.role ?? UserRole.SELLER,
-          image: null,
-          hasPassword: Boolean(body.password),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      },
-      { status: 201 }
-    );
+      return NextResponse.json({ error: "Nao foi possivel criar o perfil de acesso." }, { status: 500 });
+    }
   }
+}
+
+function setDemoTeamCookie(response: NextResponse) {
+  response.cookies.set(DEMO_TEAM_COOKIE_NAME, encodeDemoTeamCookie(), {
+    path: "/",
+    maxAge: DEMO_TEAM_COOKIE_MAX_AGE_SECONDS,
+    sameSite: "lax",
+    httpOnly: true
+  });
 }
