@@ -19,11 +19,12 @@ export default function LoginPage() {
     event.preventDefault();
     setLoading(true);
     const form = new FormData(event.currentTarget);
+    const callbackUrl = getSafeCallbackUrl(new URLSearchParams(window.location.search).get("callbackUrl"));
     const result = await signIn("credentials", {
       login: String(form.get("login")),
       password: String(form.get("password")),
       redirect: false,
-      callbackUrl: "/dashboard"
+      callbackUrl
     });
     setLoading(false);
 
@@ -32,7 +33,7 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.href = result?.url ?? "/dashboard";
+    window.location.href = result?.url ?? callbackUrl;
   }
 
   return (
@@ -128,4 +129,11 @@ export default function LoginPage() {
       </section>
     </main>
   );
+}
+
+function getSafeCallbackUrl(value: string | null) {
+  if (!value) return "/dashboard";
+  if (!value.startsWith("/") || value.startsWith("//")) return "/dashboard";
+  if (value.startsWith("/api") || value.startsWith("/_next") || value.includes(".")) return "/dashboard";
+  return value;
 }
