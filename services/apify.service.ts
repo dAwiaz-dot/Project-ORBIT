@@ -25,13 +25,39 @@ const apifyPlaceSchema = z.object({
   instagram: z.string().nullable().optional()
 });
 
+const defaultGoogleMapsActorId = "compass~crawler-google-places";
+
+export function normalizeApifyActorId(actorId: string | null | undefined) {
+  const value = actorId?.trim() || defaultGoogleMapsActorId;
+  if (/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(value)) {
+    return value.replace("/", "~");
+  }
+
+  return value;
+}
+
+export function buildApifyRunInput(filters: LeadSearchFilters) {
+  const searchString = `${filters.category} em ${filters.city} ${filters.state}`.trim();
+
+  return {
+    searchString,
+    maxCrawledPlaces: filters.maxResults,
+    language: "pt-BR",
+    skipClosedPlaces: true,
+    includeWebResults: true,
+    proxyConfig: {
+      useApifyProxy: true
+    }
+  };
+}
+
 export class ApifyGoogleMapsService {
   private token: string;
   private actorId: string;
 
   constructor(token = process.env.APIFY_TOKEN ?? "", actorId = process.env.APIFY_GOOGLE_MAPS_ACTOR_ID ?? "") {
     this.token = token;
-    this.actorId = actorId || "compass/crawler-google-places";
+    this.actorId = normalizeApifyActorId(actorId);
   }
 
   async search(filters: LeadSearchFilters): Promise<Lead[]> {
@@ -39,22 +65,16 @@ export class ApifyGoogleMapsService {
       throw new Error("APIFY_TOKEN nao configurado.");
     }
 
-    const runResponse = await fetch(`https://api.apify.com/v2/acts/${this.actorId}/runs?token=${this.token}`, {
+    const runResponse = await fetch(`https://api.apify.com/v2/acts/${encodeURIComponent(this.actorId)}/runs?token=${this.token}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        searchStringsArray: [`${filters.category} em ${filters.city} ${filters.state}`],
-        maxCrawledPlacesPerSearch: filters.maxResults,
-        language: "pt-BR",
-        includeWebResults: true,
-        skipClosedPlaces: true
-      })
+      body: JSON.stringify(buildApifyRunInput(filters))
     });
 
     if (!runResponse.ok) {
-      throw new Error(`Falha ao iniciar Apify: ${runResponse.status}`);
+      throw new Error(await buildApifyStartError(runResponse, this.actorId));
     }
 
     const run = (await runResponse.json()) as { data?: { id?: string; defaultDatasetId?: string } };
@@ -115,5 +135,36 @@ export class ApifyGoogleMapsService {
       status: "NEW",
       createdAt: new Date().toISOString()
     };
+  }
+}
+
+async function buildApifyStartError(response: Response, actorId: string) {
+  const details = await readApifyErrorMessage(response);
+
+  if (response.status === 401 || response.status === 403) {
+    return "Token Apify invalido ou sem permissao. Confira o token salvo em Configuracoes.";
+  }
+
+  if (response.status === 402) {
+    return "A conta Apify nao possui creditos suficientes para iniciar a busca.";
+  }
+
+  if (response.status === 404) {
+    return `Actor Apify nao encontrado (${actorId}). Use compass~crawler-google-places ou configure APIFY_GOOGLE_MAPS_ACTOR_ID no Vercel.`;
+  }
+
+  return details ? `Falha ao iniciar Apify: ${response.status} - ${details}` : `Falha ao iniciar Apify: ${response.status}`;
+}
+
+async function readApifyErrorMessage(response: Response) {
+  try {
+    const payload = (await response.clone().json()) as { error?: { message?: string } };
+    return payload.error?.message ?? "";
+  } catch {
+    try {
+      return (await response.clone().text()).slice(0, 180);
+    } catch {
+      return "";
+    }
   }
 }

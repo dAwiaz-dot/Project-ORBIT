@@ -49,7 +49,7 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/orbit_leads?schema=p
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="gere-uma-chave-segura"
 APIFY_TOKEN="apify_api_xxx"
-APIFY_GOOGLE_MAPS_ACTOR_ID="compass/crawler-google-places"
+APIFY_GOOGLE_MAPS_ACTOR_ID="compass~crawler-google-places"
 OPENAI_API_KEY=""
 SMTP_HOST=""
 SMTP_USER=""
@@ -135,7 +135,7 @@ Campos salvos:
 - WhatsApp
 - status
 
-O actor pode ser trocado por `.env` usando `APIFY_GOOGLE_MAPS_ACTOR_ID`.
+O actor padrao e `compass~crawler-google-places`. A API da Apify usa `~` entre usuario e actor; se voce informar `compass/crawler-google-places`, o service normaliza automaticamente para evitar erro 404. O actor pode ser trocado por `.env` usando `APIFY_GOOGLE_MAPS_ACTOR_ID`.
 
 ## Exportacao
 
