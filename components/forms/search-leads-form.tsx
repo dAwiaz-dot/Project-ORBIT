@@ -89,15 +89,20 @@ export function SearchLeadsForm() {
     setLoading(false);
     const payload = (await response.json().catch(() => ({}))) as { job?: SearchJobDto; error?: string };
     if (!response.ok || !payload.job) {
-      toast.error(payload.error ?? "Nao foi possivel criar a busca");
+      handleSearchError(response.status, payload.error);
       return;
     }
 
     const job = payload.job;
     setActiveJob(job);
     setJobs((current) => upsertJob(current, job));
-    connectToJob(job.id);
-    toast.success("Busca adicionada a fila");
+    if (!terminalStatuses.has(job.status)) {
+      connectToJob(job.id);
+      toast.success("Busca adicionada a fila");
+      return;
+    }
+
+    toast.success(job.resultCount > 0 ? `${job.resultCount} leads gerados` : "Busca concluida");
   }
 
   function connectToJob(jobId: string) {
@@ -118,7 +123,36 @@ export function SearchLeadsForm() {
     source.onerror = () => {
       source.close();
       eventSourceRef.current = null;
+      void refreshJob(jobId);
     };
+  }
+
+  async function refreshJob(jobId: string) {
+    const response = await fetch(`/api/search-jobs/${jobId}`);
+    const payload = (await response.json().catch(() => ({}))) as { job?: SearchJobDto; error?: string };
+
+    if (!response.ok || !payload.job) {
+      if (response.status !== 404) handleSearchError(response.status, payload.error);
+      return;
+    }
+
+    setActiveJob(payload.job);
+    setJobs((current) => upsertJob(current, payload.job!));
+  }
+
+  function handleSearchError(status: number, message?: string) {
+    if (status === 401) {
+      toast.error("Sessao expirada", { description: "Entre novamente para gerar leads." });
+      window.location.assign(`/login?callbackUrl=${encodeURIComponent("/buscar-leads")}`);
+      return;
+    }
+
+    if (status === 403) {
+      toast.error("Seu perfil nao pode gerar leads", { description: "Use um perfil Administrador ou Vendedor." });
+      return;
+    }
+
+    toast.error(message ?? "Nao foi possivel criar a busca");
   }
 
   return (

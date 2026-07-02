@@ -33,7 +33,7 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.href = result?.url ?? callbackUrl;
+    window.location.assign(callbackUrl);
   }
 
   return (
