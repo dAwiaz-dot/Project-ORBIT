@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -20,6 +20,7 @@ const demoUsers = [
     email: "davi@orbit.local",
     role: UserRole.ADMIN,
     image: null,
+    hasPassword: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }
@@ -36,6 +37,7 @@ export async function GET() {
         email: true,
         role: true,
         image: true,
+        passwordHash: true,
         createdAt: true,
         updatedAt: true
       }
@@ -43,7 +45,12 @@ export async function GET() {
 
     return NextResponse.json({
       users: users.map((user) => ({
-        ...user,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        image: user.image,
+        hasPassword: Boolean(user.passwordHash),
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString()
       }))
@@ -71,7 +78,7 @@ export async function POST(request: Request) {
         passwordHash: await hash(parsed.data.password, 12),
         role: parsed.data.role
       },
-      select: { id: true, name: true, email: true, role: true, image: true, createdAt: true, updatedAt: true }
+      select: { id: true, name: true, email: true, role: true, image: true, passwordHash: true, createdAt: true, updatedAt: true }
     });
 
     await recordAudit({
@@ -86,7 +93,12 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         user: {
-          ...user,
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          image: user.image,
+          hasPassword: Boolean(user.passwordHash),
           createdAt: user.createdAt.toISOString(),
           updatedAt: user.updatedAt.toISOString()
         }
@@ -95,6 +107,10 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json({ error: "Este email ja esta cadastrado." }, { status: 409 });
+    }
+
     const body = await request.json().catch(() => ({}));
     return NextResponse.json(
       {
@@ -104,6 +120,7 @@ export async function POST(request: Request) {
           email: body.email ?? "demo@orbit.local",
           role: body.role ?? UserRole.SELLER,
           image: null,
+          hasPassword: Boolean(body.password),
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }

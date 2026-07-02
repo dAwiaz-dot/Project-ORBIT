@@ -83,10 +83,10 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login">Login</Label>
+                <Label htmlFor="login">Email ou login</Label>
                 <div className="relative">
                   <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="login" name="login" type="text" autoComplete="username" className="pl-9" placeholder="Seu login" required />
+                  <Input id="login" name="login" type="text" autoComplete="username" className="pl-9" placeholder="seu@email.com" required />
                 </div>
               </div>
               <div className="space-y-2">

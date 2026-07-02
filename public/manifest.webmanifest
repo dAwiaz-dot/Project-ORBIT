@@ -2,12 +2,15 @@
   "name": "Orbit Leads",
   "short_name": "Orbit",
   "description": "CRM premium de prospeccao da Orbit.",
+  "id": "/dashboard",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#050505",
   "theme_color": "#050505",
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/icon-192.png",

@@ -11,11 +11,13 @@ export default function EquipePage() {
         <PageHeader
           eyebrow="Colaboracao"
           title="Equipe"
-          description="Gerencie acessos, papeis e responsaveis pelas campanhas de prospeccao."
+          description="Cadastre pessoas, crie perfis de login e controle permissoes de administradores, vendedores e financeiro."
           actions={
-            <Button variant="premium">
-              <UserPlus className="mr-2 h-4 w-4" />
-              Convidar
+            <Button variant="premium" asChild>
+              <a href="#novo-perfil">
+                <UserPlus className="mr-2 h-4 w-4" />
+                Novo perfil
+              </a>
             </Button>
           }
         />
