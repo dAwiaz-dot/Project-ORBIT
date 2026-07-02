@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { LeadRepository } from "@/repositories/lead.repository";
+import { decodeDemoSearchCookie, listDemoLeadsFromFilters } from "@/services/demo/demo-store";
 import type { LeadStatus } from "@/types/lead";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const page = Number(url.searchParams.get("page") ?? 1);
   const pageSize = Number(url.searchParams.get("pageSize") ?? 25);
-
-  const result = await new LeadRepository().list({
+  const query = {
     q: url.searchParams.get("q") ?? undefined,
     category: url.searchParams.get("category") ?? undefined,
     city: url.searchParams.get("city") ?? undefined,
@@ -15,7 +15,18 @@ export async function GET(request: Request) {
     sort: (url.searchParams.get("sort") as "rating-desc" | "reviews-desc" | "company-asc" | "recent-desc" | null) ?? undefined,
     page,
     pageSize
-  });
+  };
 
-  return NextResponse.json(result);
+  const result = await new LeadRepository().list(query);
+  const demoFilters = decodeDemoSearchCookie(getCookieValue(request.headers.get("cookie"), "orbit_demo_search"));
+
+  return NextResponse.json(result.total === 0 && demoFilters ? listDemoLeadsFromFilters(demoFilters, query) : result);
+}
+
+function getCookieValue(header: string | null, name: string) {
+  return header
+    ?.split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
 }

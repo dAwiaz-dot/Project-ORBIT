@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Clock3, Loader2, MapPin, Rocket, SlidersHorizontal, Sparkles } from "lucide-react";
+import { ArrowRight, Clock3, Loader2, MapPin, Rocket, SlidersHorizontal, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -251,6 +252,14 @@ export function SearchLeadsForm() {
                   </div>
                 </div>
                 {activeJob.error && <p className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{activeJob.error}</p>}
+                {activeJob.status === "SUCCEEDED" && activeJob.resultCount > 0 && (
+                  <Button asChild variant="premium">
+                    <Link href="/leads">
+                      Ver leads gerados
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="grid min-h-[180px] place-items-center rounded-lg border border-dashed bg-background/70 p-6 text-center text-sm text-muted-foreground">

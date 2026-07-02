@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getDemoLeadDetails, listDemoLeads, updateDemoLeadStatus } from "@/services/demo/demo-store";
 import type { Lead, LeadDetail, LeadStatus, PaginatedLeadsResult } from "@/types/lead";
 
 export type LeadListQuery = {
@@ -39,7 +40,7 @@ export class LeadRepository {
       };
     } catch (error) {
       console.error("Falha ao listar leads", error);
-      return this.emptyResult(page, pageSize);
+      return listDemoLeads(query);
     }
   }
 
@@ -49,7 +50,7 @@ export class LeadRepository {
       return lead ? this.toLead(lead) : null;
     } catch (error) {
       console.error("Falha ao carregar lead", error);
-      return null;
+      return getDemoLeadDetails(id);
     }
   }
 
@@ -119,7 +120,7 @@ export class LeadRepository {
       };
     } catch (error) {
       console.error("Falha ao carregar detalhe do lead", error);
-      return null;
+      return getDemoLeadDetails(id);
     }
   }
 
@@ -127,7 +128,7 @@ export class LeadRepository {
     try {
       return await prisma.lead.update({ where: { id }, data: { status } });
     } catch {
-      return null;
+      return updateDemoLeadStatus(id, status);
     }
   }
 
@@ -156,10 +157,6 @@ export class LeadRepository {
     if (sort === "reviews-desc") return { reviewCount: "desc" };
     if (sort === "company-asc") return { company: "asc" };
     return { createdAt: "desc" };
-  }
-
-  private emptyResult(page: number, pageSize: number): PaginatedLeadsResult {
-    return { leads: [], total: 0, page, pageSize, totalPages: 1 };
   }
 
   private toLead(lead: Prisma.LeadGetPayload<{ include: { category: true } }>): Lead {

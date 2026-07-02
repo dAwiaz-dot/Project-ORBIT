@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { OrbitLogo } from "@/components/ui/orbit-logo";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ProfileMenu } from "@/components/user/profile-menu";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -133,9 +134,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Button variant="outline" size="icon" title="Notificacoes" aria-label="Notificacoes">
                 <Bell className="h-4 w-4" />
               </Button>
-              <div className="hidden h-9 w-9 place-items-center rounded-lg bg-foreground text-xs font-bold text-background sm:grid">
-                OR
-              </div>
+              <ProfileMenu />
             </div>
           </div>
         </header>

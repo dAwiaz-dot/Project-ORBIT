@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { isRbacError, rbacErrorResponse, requirePermission } from "@/lib/rbac";
+import { decodeDemoSearchCookie, getDemoSearchJob, getDemoSearchJobFromFilters } from "@/services/demo/demo-store";
 import { toSearchJobDto } from "@/services/search-jobs/search-job.service";
 
 export const runtime = "nodejs";
@@ -60,27 +61,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
     const { id } = await params;
-    const now = new Date().toISOString();
-    const demoJob = {
-      id,
-      status: "SUCCEEDED",
-      state: "MG",
-      city: "Pouso Alegre",
-      category: "Dentistas",
-      maxResults: 50,
-      minRating: 0,
-      minReviews: 0,
-      progress: 100,
-      message: "Modo demonstracao: conecte PostgreSQL e Apify para executar a busca real.",
-      resultCount: 0,
-      duplicateCount: 0,
-      error: null,
-      startedAt: now,
-      completedAt: now,
-      createdAt: now,
-      updatedAt: now,
-      user: { id: "development-admin-davi", name: "Davi", email: "davi@orbit.local" }
-    };
+    const demoFilters = decodeDemoSearchCookie(getCookieValue(request.headers.get("cookie"), "orbit_demo_search"));
+    const demoJob = getDemoSearchJob(id) ?? (demoFilters ? getDemoSearchJobFromFilters(id, demoFilters) : { error: "Busca nao encontrada." });
 
     return new Response(`data: ${JSON.stringify(demoJob)}\n\n`, {
       headers: {
@@ -90,4 +72,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       }
     });
   }
+}
+
+function getCookieValue(header: string | null, name: string) {
+  return header
+    ?.split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
 }

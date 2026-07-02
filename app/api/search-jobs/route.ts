@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isRbacError, rbacErrorResponse, requirePermission } from "@/lib/rbac";
+import {
+  createDemoSearchJob,
+  decodeDemoSearchCookie,
+  encodeDemoSearchCookie,
+  getDemoSearchJobFromFilters,
+  listDemoSearchJobs
+} from "@/services/demo/demo-store";
 import { recordAudit } from "@/services/audit/audit.service";
 import { createSearchJob, processSearchJob, searchJobSchema, toSearchJobDto } from "@/services/search-jobs/search-job.service";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await requirePermission("searchJobs:read");
 
@@ -19,20 +26,22 @@ export async function GET() {
     return NextResponse.json({ jobs: jobs.map(toSearchJobDto) });
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    return NextResponse.json({ jobs: [] });
+    const jobs = listDemoSearchJobs();
+    const demoFilters = decodeDemoSearchCookie(getCookieValue(request.headers.get("cookie"), "orbit_demo_search"));
+    return NextResponse.json({ jobs: jobs.length ? jobs : demoFilters ? [getDemoSearchJobFromFilters("demo-last-search", demoFilters)] : [] });
   }
 }
 
 export async function POST(request: Request) {
+  const body = await request.json().catch(() => ({}));
+  const parsed = searchJobSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Filtros invalidos", details: parsed.error.flatten() }, { status: 400 });
+  }
+
   try {
     const user = await requirePermission("searchJobs:create");
-    const body = await request.json();
-    const parsed = searchJobSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Filtros invalidos", details: parsed.error.flatten() }, { status: 400 });
-    }
-
     const job = await createSearchJob(parsed.data, user.id);
     await recordAudit({
       action: "SEARCH_JOB_CREATED",
@@ -48,32 +57,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ job: toSearchJobDto(job) }, { status: 202 });
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
-    const body = await request.json().catch(() => ({}));
-    const now = new Date().toISOString();
-    return NextResponse.json(
-      {
-        job: {
-          id: `demo-job-${Date.now()}`,
-          status: "SUCCEEDED",
-          state: body.state ?? "MG",
-          city: body.city ?? "Pouso Alegre",
-          category: body.category ?? "Dentistas",
-          maxResults: Number(body.maxResults ?? 50),
-          minRating: Number(body.minRating ?? 0),
-          minReviews: Number(body.minReviews ?? 0),
-          progress: 100,
-          message: "Modo demonstracao: conecte PostgreSQL e Apify para executar a busca real.",
-          resultCount: 0,
-          duplicateCount: 0,
-          error: null,
-          startedAt: now,
-          completedAt: now,
-          createdAt: now,
-          updatedAt: now,
-          user: { id: "development-admin-davi", name: "Davi", email: "davi@orbit.local" }
-        }
-      },
-      { status: 202 }
-    );
+    const job = createDemoSearchJob(parsed.data, { id: "development-admin-davi", name: "Davi", email: "davi@orbit.local" });
+    const response = NextResponse.json({ job }, { status: 202 });
+    response.cookies.set("orbit_demo_search", encodeDemoSearchCookie(parsed.data), {
+      path: "/",
+      maxAge: 60 * 60 * 24,
+      sameSite: "lax"
+    });
+    return response;
   }
+}
+
+function getCookieValue(header: string | null, name: string) {
+  return header
+    ?.split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
 }

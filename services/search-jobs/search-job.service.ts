@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ApifyGoogleMapsService } from "@/services/apify.service";
 import { recordAudit } from "@/services/audit/audit.service";
+import { generateDemoLeads } from "@/services/demo/demo-store";
 import { filterLeads } from "@/services/lead-filter.service";
 import type { Lead, LeadSearchFilters } from "@/types/lead";
 import type { SearchJobDto } from "@/types/search-job";
@@ -89,10 +90,15 @@ export async function processSearchJob(jobId: string) {
 
     const settings = await prisma.appSettings.findFirst({ select: { apifyToken: true } });
     const token = settings?.apifyToken?.trim() || process.env.APIFY_TOKEN || "";
-    const service = new ApifyGoogleMapsService(token);
-
-    await updateJob(jobId, { progress: 25, message: "Coletando empresas no Google Maps" });
-    const rawLeads = await service.search(filters);
+    let rawLeads: Lead[];
+    if (token) {
+      const service = new ApifyGoogleMapsService(token);
+      await updateJob(jobId, { progress: 25, message: "Coletando empresas no Google Maps" });
+      rawLeads = await service.search(filters);
+    } else {
+      await updateJob(jobId, { progress: 25, message: "Apify nao configurada. Gerando leads de apresentacao" });
+      rawLeads = generateDemoLeads(filters);
+    }
 
     await updateJob(jobId, { progress: 65, message: "Aplicando filtros e removendo duplicados" });
     const leads = filterLeads(rawLeads, filters);
