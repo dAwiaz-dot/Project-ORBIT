@@ -3,7 +3,7 @@ import { getToken } from "next-auth/jwt";
 import { authSecret } from "@/lib/auth-secret";
 import { isSessionExpired } from "@/lib/session-policy";
 
-const publicRoutes = new Set(["/", "/login"]);
+const publicRoutes = new Set(["/login"]);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
