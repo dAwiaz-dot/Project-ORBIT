@@ -35,6 +35,6 @@ function redirectToLogin(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|favicon.png|apple-touch-icon.png|icon-192.png|icon-512.png|orbit-logo.png|manifest.webmanifest|sw.js).*)"
+    "/((?!api|_next/static|_next/image|manifest.webmanifest|sw.js|.*\\.(?:ico|png|jpg|jpeg|svg|webp|woff2?)$).*)"
   ]
 };
