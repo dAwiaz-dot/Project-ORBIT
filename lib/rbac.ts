@@ -3,47 +3,16 @@ import { getServerSession } from "next-auth";
 import { UserRole } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission, type Permission } from "@/lib/permissions";
 
-export type Permission =
-  | "leads:read"
-  | "leads:update"
-  | "searchJobs:create"
-  | "searchJobs:read"
-  | "team:read"
-  | "team:write"
-  | "settings:read"
-  | "settings:write"
-  | "exports:create"
-  | "audit:read";
+export type { Permission } from "@/lib/permissions";
+export { hasPermission, roleLabels } from "@/lib/permissions";
 
 export type CurrentUser = {
   id: string;
   name: string | null;
   email: string | null;
   role: UserRole;
-};
-
-export const roleLabels: Record<UserRole, string> = {
-  ADMIN: "Administrador",
-  SELLER: "Vendedor",
-  FINANCE: "Financeiro"
-};
-
-const rolePermissions: Record<UserRole, Permission[]> = {
-  ADMIN: [
-    "leads:read",
-    "leads:update",
-    "searchJobs:create",
-    "searchJobs:read",
-    "team:read",
-    "team:write",
-    "settings:read",
-    "settings:write",
-    "exports:create",
-    "audit:read"
-  ],
-  SELLER: ["leads:read", "leads:update", "searchJobs:create", "searchJobs:read", "exports:create"],
-  FINANCE: ["leads:read", "team:read", "exports:create", "audit:read", "settings:read"]
 };
 
 export class RbacError extends Error {
@@ -54,10 +23,6 @@ export class RbacError extends Error {
     super(message);
     this.name = "RbacError";
   }
-}
-
-export function hasPermission(role: UserRole, permission: Permission) {
-  return rolePermissions[role].includes(permission);
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {

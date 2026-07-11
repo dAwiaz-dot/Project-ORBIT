@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
   BarChart3,
@@ -30,12 +31,13 @@ import { Input } from "@/components/ui/input";
 import { OrbitLogo } from "@/components/ui/orbit-logo";
 import { Separator } from "@/components/ui/separator";
 import { ProfileMenu } from "@/components/user/profile-menu";
+import { hasPermission, type Permission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
-const navigation = [
+const navigation: { label: string; href: string; icon: typeof LayoutDashboard; permission?: Permission }[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Inteligencia", href: "/inteligencia", icon: Bot },
-  { label: "Buscar Leads", href: "/buscar-leads", icon: Search },
+  { label: "Buscar Leads", href: "/buscar-leads", icon: Search, permission: "searchJobs:create" },
   { label: "Leads", href: "/leads", icon: Building2 },
   { label: "CRM", href: "/crm", icon: BriefcaseBusiness },
   { label: "Mapa", href: "/mapa", icon: MapPinned },
@@ -48,13 +50,16 @@ const navigation = [
   { label: "Relatorios", href: "/relatorios", icon: FileBarChart },
   { label: "Exportacoes", href: "/exportacoes", icon: Download },
   { label: "Importacao", href: "/importacao", icon: FileSpreadsheet },
-  { label: "Historico", href: "/historico", icon: History },
-  { label: "Equipe", href: "/equipe", icon: UsersRound },
-  { label: "Configuracoes", href: "/configuracoes", icon: Settings }
+  { label: "Historico", href: "/historico", icon: History, permission: "audit:read" },
+  { label: "Equipe", href: "/equipe", icon: UsersRound, permission: "team:read" },
+  { label: "Configuracoes", href: "/configuracoes", icon: Settings, permission: "settings:read" }
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = session?.user?.role;
+  const visibleNavigation = navigation.filter((item) => !item.permission || (role && hasPermission(role, item.permission)));
 
   return (
     <div className="min-h-screen bg-background">
@@ -74,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto pr-1">
-          {navigation.map((item) => {
+          {visibleNavigation.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
             return (
@@ -151,7 +156,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t bg-card/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-panel backdrop-blur-xl lg:hidden">
         <div className="grid grid-cols-5 gap-1">
-          {navigation.slice(0, 5).map((item) => {
+          {visibleNavigation.slice(0, 5).map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
             return (
