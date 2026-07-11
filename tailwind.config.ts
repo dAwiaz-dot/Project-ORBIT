@@ -54,14 +54,18 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))"
         },
-        orbit: {
-          ink: "#101828",
-          line: "#D7DEE9",
-          mint: "#16B8A6",
-          blue: "#1E68FF",
-          amber: "#F2A93B",
-          rose: "#EA4D76"
+        ryze: {
+          bg: "#050816",
+          elevated: "#0b1020",
+          border: "#1c2440",
+          accent1: "#7B61FF",
+          accent2: "#5B8CFF",
+          accent3: "#00E5FF",
+          accent4: "#00FFA3"
         }
+      },
+      fontFamily: {
+        display: ["var(--font-sora)", "ui-sans-serif", "system-ui", "sans-serif"]
       },
       borderRadius: {
         lg: "var(--radius)",

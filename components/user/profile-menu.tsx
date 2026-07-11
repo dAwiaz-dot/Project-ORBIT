@@ -50,7 +50,7 @@ export function ProfileMenu() {
                 {initials}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{user?.name ?? "Perfil Orbit"}</p>
+                <p className="truncate text-sm font-semibold">{user?.name ?? "Perfil Ryze"}</p>
                 <p className="truncate text-xs text-muted-foreground">{user?.email ?? "Sessao ativa"}</p>
                 <Badge variant={user?.role === "ADMIN" ? "success" : "secondary"} className="mt-2">
                   {roleLabels[user?.role ?? "SELLER"] ?? "Usuario"}
@@ -91,7 +91,7 @@ export function ProfileMenu() {
 
           <div className="mt-2 flex items-center gap-2 rounded-md border bg-background p-2 text-xs text-muted-foreground">
             <ShieldCheck className="h-4 w-4 text-primary" />
-            Sessao protegida pelo Orbit Leads
+            Sessao protegida pelo Ryze CRM
           </div>
         </div>
       )}

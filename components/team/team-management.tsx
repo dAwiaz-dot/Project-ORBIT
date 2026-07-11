@@ -314,7 +314,7 @@ export function TeamManagement() {
                 <div>
                   <p className="text-sm font-semibold">Acesso individual</p>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Cada pessoa entra no Orbit Leads usando o proprio email e senha cadastrados aqui.
+                    Cada pessoa entra no Ryze CRM usando o proprio email e senha cadastrados aqui.
                   </p>
                 </div>
               </div>

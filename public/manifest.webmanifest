@@ -1,15 +1,15 @@
 {
-  "name": "Orbit Leads",
-  "short_name": "Orbit",
-  "description": "CRM premium de prospeccao da Orbit.",
+  "name": "Ryze CRM",
+  "short_name": "Ryze",
+  "description": "CRM premium de prospeccao da Ryze Agency.",
   "id": "/dashboard",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
-  "background_color": "#050505",
-  "theme_color": "#050505",
+  "background_color": "#050816",
+  "theme_color": "#050816",
   "categories": ["business", "productivity"],
   "icons": [
     {

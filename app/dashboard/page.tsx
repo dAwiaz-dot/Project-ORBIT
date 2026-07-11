@@ -26,7 +26,7 @@ export default function DashboardPage() {
     <AppShell>
       <div className="page-shell">
         <PageHeader
-          eyebrow="Orbit Leads"
+          eyebrow="Ryze CRM"
           title="Dashboard de prospeccao"
           description="Visao executiva dos leads capturados, oportunidades sem site, canais disponiveis e crescimento da base."
           actions={

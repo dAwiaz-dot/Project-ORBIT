@@ -36,7 +36,7 @@ type SettingsResponse = Partial<
 };
 
 const defaultSettings: SettingsState = {
-  companyName: "Orbit",
+  companyName: "Ryze",
   logoUrl: "",
   apifyToken: "",
   openAiApiKey: "",

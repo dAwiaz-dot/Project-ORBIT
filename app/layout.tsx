@@ -1,11 +1,14 @@
 import type { Metadata, Viewport } from "next";
+import { Sora } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
+const sora = Sora({ subsets: ["latin"], weight: ["500", "600", "700", "800"], variable: "--font-sora" });
+
 export const metadata: Metadata = {
-  title: "Orbit Leads",
-  description: "Plataforma premium de prospeccao para agencias de marketing.",
-  applicationName: "Orbit Leads",
+  title: "Ryze CRM",
+  description: "Painel de prospeccao e gestao comercial da Ryze Agency.",
+  applicationName: "Ryze CRM",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/favicon.png",
@@ -14,7 +17,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "Orbit Leads",
+    title: "Ryze CRM",
     statusBarStyle: "black-translucent"
   },
   formatDetection: {
@@ -29,12 +32,12 @@ export const viewport: Viewport = {
   minimumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#050505"
+  themeColor: "#050816"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning className={`dark ${sora.variable}`}>
       <body className="min-h-screen font-sans">
         <Providers>{children}</Providers>
       </body>

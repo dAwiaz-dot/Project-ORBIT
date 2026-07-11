@@ -157,7 +157,7 @@ export function ProfileSettings() {
           <CardContent className="space-y-4">
             <div className="rounded-lg border bg-background p-4">
               <p className="text-xs text-muted-foreground">Perfil atual</p>
-              <p className="mt-1 truncate text-sm font-semibold">{user?.name ?? "Orbit"}</p>
+              <p className="mt-1 truncate text-sm font-semibold">{user?.name ?? "Ryze"}</p>
               <p className="truncate text-xs text-muted-foreground">{user?.email ?? "Sem email"}</p>
               {user && (
                 <Badge variant={user.role === "ADMIN" ? "success" : "secondary"} className="mt-3">

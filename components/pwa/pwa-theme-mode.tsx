@@ -1,15 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { useTheme } from "next-themes";
 
 type NavigatorWithStandalone = Navigator & {
   standalone?: boolean;
 };
 
 export function PwaThemeMode() {
-  const { setTheme } = useTheme();
-
   useEffect(() => {
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
@@ -17,10 +14,9 @@ export function PwaThemeMode() {
 
     if (!isStandalone) return;
 
-    setTheme("dark");
-    document.documentElement.style.backgroundColor = "#050505";
-    document.body.style.backgroundColor = "#050505";
-  }, [setTheme]);
+    document.documentElement.style.backgroundColor = "#050816";
+    document.body.style.backgroundColor = "#050816";
+  }, []);
 
   return null;
 }

@@ -15,7 +15,7 @@ export default function ImportacaoPage() {
         <PageHeader
           eyebrow="Operacao"
           title="Manual de importacao"
-          description="Padrao operacional para preparar planilhas de leads antes de importar no Orbit Leads."
+          description="Padrao operacional para preparar planilhas de leads antes de importar no Ryze CRM."
         />
 
         <section className="grid gap-6 xl:grid-cols-[1fr_420px]">
@@ -57,7 +57,7 @@ export default function ImportacaoPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>O Orbit Leads considera duplicados quando Empresa, Telefone e Cidade indicam o mesmo contato.</p>
+              <p>O Ryze CRM considera duplicados quando Empresa, Telefone e Cidade indicam o mesmo contato.</p>
               <p>Se o telefone estiver vazio, revise manualmente nomes muito parecidos na mesma cidade.</p>
             </CardContent>
           </Card>

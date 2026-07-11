@@ -38,15 +38,15 @@ export default function LoginPage() {
 
   return (
     <main className="grid min-h-screen lg:grid-cols-[1.05fr_.95fr]">
-      <section className="hidden border-r border-white/10 bg-[radial-gradient(circle_at_24%_14%,rgba(255,255,255,.16),transparent_31%),linear-gradient(145deg,#101010,#030303_62%,#000)] text-white lg:flex lg:flex-col lg:justify-between lg:p-10">
+      <section className="hidden border-r border-white/10 bg-[radial-gradient(circle_at_24%_14%,rgba(123,97,255,.22),transparent_31%),linear-gradient(145deg,#0b1020,#050816_62%,#05050f)] text-white lg:flex lg:flex-col lg:justify-between lg:p-10">
         <OrbitLogo />
         <div className="max-w-2xl">
           <div className="mb-6 inline-flex items-center rounded-md border border-white/20 px-3 py-1 text-sm text-white/80">
             <Sparkles className="mr-2 h-4 w-4 text-white" />
             SaaS de prospeccao para agencias que querem escala
           </div>
-          <h1 className="text-5xl font-bold tracking-normal">
-            Encontre empresas prontas para virar clientes da Orbit.
+          <h1 className="font-display text-5xl font-bold tracking-tight">
+            Encontre empresas prontas para virar clientes da Ryze.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-white/70">
             Leads do Google Maps, filtros inteligentes, mensagens com variaveis, WhatsApp seguro e exportacao por categoria.
@@ -77,7 +77,7 @@ export default function LoginPage() {
             </div>
 
             <div className="mb-6">
-              <h2 className="text-2xl font-bold">Entrar na Orbit</h2>
+              <h2 className="font-display text-2xl font-bold">Entrar na Ryze</h2>
               <p className="mt-2 text-sm text-muted-foreground">Acesse seu cockpit de prospeccao.</p>
             </div>
 

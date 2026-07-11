@@ -4,52 +4,28 @@
 
 @layer base {
   :root {
-    --background: 216 33% 97%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 220 100% 56%;
+    --background: 229 63% 5%;
+    --foreground: 0 0% 100%;
+    --card: 226 49% 8%;
+    --card-foreground: 0 0% 100%;
+    --popover: 226 49% 8%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 222 100% 68%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 214 32% 91%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 214 32% 91%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 173 76% 40%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 349 78% 61%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 214 28% 88%;
-    --input: 214 28% 88%;
-    --ring: 220 100% 56%;
-    --radius: 0.5rem;
-    --chart-leads: 220 100% 56%;
-    --chart-qualified: 173 76% 40%;
-  }
-
-  .dark {
-    --background: 0 0% 2%;
-    --foreground: 0 0% 94%;
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 94%;
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 94%;
-    --primary: 0 0% 96%;
-    --primary-foreground: 0 0% 5%;
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 92%;
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 0 0% 78%;
-    --accent-foreground: 0 0% 4%;
+    --secondary: 227 32% 12%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 227 32% 12%;
+    --muted-foreground: 222 20% 65%;
+    --accent: 186 100% 50%;
+    --accent-foreground: 229 63% 5%;
     --destructive: 349 72% 58%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 17%;
-    --input: 0 0% 16%;
-    --ring: 0 0% 88%;
-    --chart-leads: 0 0% 96%;
-    --chart-qualified: 0 0% 68%;
+    --border: 227 39% 18%;
+    --input: 227 39% 18%;
+    --ring: 222 100% 68%;
+    --radius: 1rem;
+    --chart-leads: 222 100% 68%;
+    --chart-qualified: 158 100% 50%;
   }
 
   * {
@@ -66,16 +42,13 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     overflow-x: hidden;
-  }
-
-  .dark body {
     background:
       linear-gradient(145deg, rgba(255, 255, 255, 0.045), transparent 32%),
-      linear-gradient(180deg, #050505 0%, #090909 48%, #020202 100%);
+      linear-gradient(180deg, #050816 0%, #0b1020 48%, #05050f 100%);
   }
 
   ::selection {
-    background: hsl(var(--primary) / 0.18);
+    background: hsl(var(--primary) / 0.28);
   }
 
   @media (pointer: coarse), (max-width: 768px) {
@@ -102,7 +75,7 @@
 
 @layer components {
   .glass-panel {
-    @apply border border-white/60 bg-white/80 shadow-panel backdrop-blur-xl dark:border-white/15 dark:bg-white/[0.045] dark:shadow-[0_1px_0_rgba(255,255,255,.08),0_28px_90px_rgba(0,0,0,.72)];
+    @apply border border-white/15 bg-white/[0.045] shadow-[0_1px_0_rgba(255,255,255,.08),0_28px_90px_rgba(0,0,0,.72)] backdrop-blur-xl;
   }
 
   .metric-grid {
@@ -116,4 +89,41 @@
   .focus-ring {
     @apply outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
   }
+
+  .ryze-glass {
+    background: color-mix(in srgb, #0b1020 65%, transparent);
+    backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid #ffffff14;
+  }
+
+  .ryze-gradient-border {
+    border-radius: inherit;
+    position: relative;
+  }
+
+  .ryze-gradient-border::before {
+    content: "";
+    border-radius: inherit;
+    background: linear-gradient(135deg, color-mix(in srgb, #5b8cff 60%, transparent), color-mix(in srgb, #7b61ff 40%, transparent) 40%, transparent 70%);
+    padding: 1px;
+    position: absolute;
+    inset: 0;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+@keyframes ryze-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+.animate-ryze-float {
+  animation: ryze-float 6s ease-in-out infinite;
 }

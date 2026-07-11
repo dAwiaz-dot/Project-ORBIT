@@ -15,7 +15,7 @@ const defaultTemplate = `Ola {empresa}, tudo bem?
 
 Vi o trabalho de voces em {cidade} e gostei bastante.
 
-Sou da Orbit e percebi algumas oportunidades para atrair mais clientes em {categoria} usando trafego, posicionamento local e WhatsApp.
+Sou da Ryze e percebi algumas oportunidades para atrair mais clientes em {categoria} usando trafego, posicionamento local e WhatsApp.
 
 Posso te mandar uma analise rapida sem compromisso?`;
 

@@ -29,7 +29,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OrbitLogo } from "@/components/ui/orbit-logo";
 import { Separator } from "@/components/ui/separator";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ProfileMenu } from "@/components/user/profile-menu";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +66,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mb-4 rounded-lg border bg-secondary/40 p-3">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Sparkles className="h-4 w-4 text-primary" />
-            Orbit Intelligence
+            Ryze Intelligence
           </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
             Ambiente limpo para apresentacao. Pronto para gerar os primeiros leads.
@@ -98,11 +97,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="rounded-lg border bg-background p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase text-muted-foreground">Plano Orbit</p>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Plano Ryze</p>
             <BarChart3 className="h-4 w-4 text-accent" />
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-secondary">
-            <div className="h-full w-0 bg-[linear-gradient(90deg,#1E68FF,#16B8A6)] dark:bg-[linear-gradient(90deg,#FFFFFF,#8A8A8A)]" />
+            <div className="h-full w-0 bg-[linear-gradient(90deg,#7B61FF,#00E5FF)]" />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">0% da meta mensal. Base zerada.</p>
         </div>
@@ -130,7 +129,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Button variant="outline" size="icon" title="Agenda de campanhas" aria-label="Agenda de campanhas">
                 <CalendarClock className="h-4 w-4" />
               </Button>
-              <ThemeToggle />
               <Button variant="outline" size="icon" title="Notificacoes" aria-label="Notificacoes">
                 <Bell className="h-4 w-4" />
               </Button>
