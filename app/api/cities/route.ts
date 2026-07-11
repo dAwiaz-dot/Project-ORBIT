@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { isRbacError, rbacErrorResponse, requirePermission } from "@/lib/rbac";
 import { sulMinasCities } from "@/data/sul-minas-cities";
 
 const citySchema = z.object({
@@ -10,6 +11,13 @@ const citySchema = z.object({
 });
 
 export async function GET() {
+  try {
+    await requirePermission("leads:read");
+  } catch (error) {
+    if (isRbacError(error)) return rbacErrorResponse(error);
+    throw error;
+  }
+
   try {
     const cities = await prisma.city.findMany({
       where: { active: true },
@@ -22,6 +30,13 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  try {
+    await requirePermission("settings:write");
+  } catch (error) {
+    if (isRbacError(error)) return rbacErrorResponse(error);
+    throw error;
+  }
+
   const body = await request.json();
   const parsed = citySchema.safeParse(body);
 
