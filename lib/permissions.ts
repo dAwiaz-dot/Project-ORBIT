@@ -10,7 +10,9 @@ export type Permission =
   | "settings:read"
   | "settings:write"
   | "exports:create"
-  | "audit:read";
+  | "audit:read"
+  | "finance:read"
+  | "finance:write";
 
 export const roleLabels: Record<UserRole, string> = {
   ADMIN: "Administrador",
@@ -29,10 +31,12 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     "settings:read",
     "settings:write",
     "exports:create",
-    "audit:read"
+    "audit:read",
+    "finance:read",
+    "finance:write"
   ],
   SELLER: ["leads:read", "leads:update", "searchJobs:create", "searchJobs:read", "exports:create"],
-  FINANCE: ["leads:read", "team:read", "exports:create", "audit:read", "settings:read"]
+  FINANCE: ["leads:read", "team:read", "exports:create", "audit:read", "settings:read", "finance:read", "finance:write"]
 };
 
 export function hasPermission(role: UserRole, permission: Permission) {

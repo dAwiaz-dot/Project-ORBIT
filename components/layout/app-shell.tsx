@@ -46,7 +46,7 @@ const navigation: { label: string; href: string; icon: typeof LayoutDashboard; p
   { label: "Mensagens", href: "/mensagens", icon: MessagesSquare },
   { label: "Campanhas", href: "/campanhas", icon: BriefcaseBusiness },
   { label: "Automacoes", href: "/automacoes", icon: Workflow },
-  { label: "Financeiro", href: "/financeiro", icon: Landmark },
+  { label: "Financeiro", href: "/financeiro", icon: Landmark, permission: "finance:read" },
   { label: "Relatorios", href: "/relatorios", icon: FileBarChart },
   { label: "Exportacoes", href: "/exportacoes", icon: Download },
   { label: "Importacao", href: "/importacao", icon: FileSpreadsheet },

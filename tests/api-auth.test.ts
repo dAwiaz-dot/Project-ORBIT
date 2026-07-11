@@ -51,10 +51,23 @@ const protectedGetRoutes = [
   "/api/team",
   "/api/settings",
   "/api/audit-logs",
-  "/api/search-jobs"
+  "/api/search-jobs",
+  "/api/finance/sales",
+  "/api/campaigns"
 ];
 
-const protectedPostRoutes = ["/api/ai/analyze", "/api/ai/message", "/api/documents/contract", "/api/documents/proposal", "/api/documents/quote", "/api/cities", "/api/categories", "/api/search-jobs"];
+const protectedPostRoutes = [
+  "/api/ai/analyze",
+  "/api/ai/message",
+  "/api/documents/contract",
+  "/api/documents/proposal",
+  "/api/documents/quote",
+  "/api/cities",
+  "/api/categories",
+  "/api/search-jobs",
+  "/api/finance/sales",
+  "/api/campaigns"
+];
 
 test("protected GET routes reject unauthenticated requests with 401", async () => {
   for (const route of protectedGetRoutes) {

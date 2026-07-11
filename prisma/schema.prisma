@@ -290,19 +290,20 @@ model ProposalDocument {
 }
 
 model Sale {
-  id            String        @id @default(cuid())
-  leadId        String
-  userId        String?
-  value         Decimal       @db.Decimal(12, 2)
-  paymentMethod PaymentMethod
-  commission    Decimal?      @db.Decimal(12, 2)
-  monthlyRevenue Decimal?     @db.Decimal(12, 2)
-  profit        Decimal?      @db.Decimal(12, 2)
-  closedAt      DateTime      @default(now())
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  clientName     String
+  leadId         String?
+  userId         String?
+  value          Decimal       @db.Decimal(12, 2)
+  paymentMethod  PaymentMethod
+  commission     Decimal?      @db.Decimal(12, 2)
+  monthlyRevenue Decimal?      @db.Decimal(12, 2)
+  profit         Decimal?      @db.Decimal(12, 2)
+  closedAt       DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  lead Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([leadId])

@@ -35,6 +35,15 @@ test("FINANCE can read team, audit and settings", () => {
   assert.equal(hasPermission("FINANCE", "settings:read"), true);
 });
 
+test("only ADMIN and FINANCE can read or write financial data", () => {
+  assert.equal(hasPermission("ADMIN", "finance:read"), true);
+  assert.equal(hasPermission("ADMIN", "finance:write"), true);
+  assert.equal(hasPermission("FINANCE", "finance:read"), true);
+  assert.equal(hasPermission("FINANCE", "finance:write"), true);
+  assert.equal(hasPermission("SELLER", "finance:read"), false);
+  assert.equal(hasPermission("SELLER", "finance:write"), false);
+});
+
 test("only ADMIN can write team or settings", () => {
   for (const role of ["SELLER", "FINANCE"] as const) {
     assert.equal(hasPermission(role, "team:write"), false, `${role} should not have team:write`);
