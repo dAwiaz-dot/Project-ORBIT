@@ -55,6 +55,8 @@ quanto no filtro do menu lateral no frontend):
 | settings:write       | x |   |   |
 | exports:create       | x | x | x |
 | audit:read           | x |   | x |
+| finance:read         | x |   | x |
+| finance:write        | x |   | x |
 
 Toda rota de API que le ou muta dado sensivel chama `requirePermission(permissao)`
 (`lib/rbac.ts`), que:
@@ -142,28 +144,46 @@ npm run dev
 4. **Menu lateral mostrava links que o papel do usuario nao pode usar**
    (a API ja bloqueava, mas a pagina abria vazia/quebrada). Corrigido para
    esconder o link quando o papel nao tem a permissao correspondente.
+5. **`/api/search-jobs` validava o corpo antes de checar permissao** — um
+   corpo invalido sem sessao retornava 400 em vez de 401. Reordenado para
+   checar `requirePermission` primeiro, igual as demais rotas.
+
+## Financeiro e Campanhas
+
+Os modelos `Sale` e `Campaign` ja existiam no `schema.prisma` (provavelmente de
+um scaffolding anterior) mas nunca tiveram API nem UI conectadas — as telas
+eram arrays vazios fixos no componente. Agora estao implementados de verdade:
+
+- **Financeiro** (`/financeiro`, `app/api/finance/sales`): registra vendas
+  (cliente, valor, forma de pagamento, comissao %). Comissao e lucro sao
+  calculados no backend. `Sale.leadId` e opcional — uma venda nao precisa
+  estar ligada a um lead que veio da Apify. Atras de `finance:read`/
+  `finance:write` (ADMIN e FINANCE apenas; SELLER nao ve o link no menu).
+- **Campanhas** (`/campanhas`, `app/api/campaigns`): cria uma campanha a
+  partir de categoria/cidade, contando quantos leads da base ja se encaixam
+  no momento da criacao (`totalLeads`). Os botoes "+1 enviado"/"+1 respondeu"
+  fazem `PATCH` manual em `sentCount`/`replyCount` — nao ha envio automatico
+  de mensagem, e o numero nao se atualiza sozinho quando o status de um lead
+  muda (e um contador manual, nao uma view derivada dos leads). Atras de
+  `leads:read`/`leads:update` (ADMIN e SELLER; FINANCE ve mas nao cria).
 
 ## Limitacoes conhecidas (nao sao bugs, sao features nao implementadas)
 
-- **Financeiro** (`/financeiro`): tela existe mas os dados sao um array vazio
-  fixo no componente (`components/finance/finance-overview.tsx`). Sem API,
-  sem persistencia.
-- **Campanhas** (`/campanhas`): mesma situacao, placeholder intencional
-  ("area limpa para apresentacao" no proprio codigo). Sem API.
 - **IA** (`services/ai/`): score e mensagens sao gerados por heuristica local,
   nao por um LLM. A estrutura ja esta pronta para plugar OpenAI quando
   `OPENAI_API_KEY` for configurada.
 - **Upload de logo**: espera um provedor de storage externo configurado via
   `LOGO_STORAGE_*`; sem isso, fica limitado.
-- **Testes automatizados**: existe `npm run test` (Node test runner), mas a
-  cobertura e parcial — nao ha testes para as rotas de API corrigidas nesta
-  entrega. Recomenda-se adicionar testes de integracao (200 autenticado,
-  401 sem sessao, 403 com papel errado) antes de novas mudancas em `app/api`.
+- **Testes automatizados**: `npm run test` cobre autenticacao de toda rota de
+  API (`tests/api-auth.test.ts`, sobe um `next dev` real e testa 401 sem
+  sessao) e a matriz de permissoes (`tests/permissions.test.ts`). Nao cobre
+  ainda o caminho "200 com permissao correta" nem 403 com papel errado —
+  precisaria de um usuario de teste autenticado por role.
 
 ## Proximos passos recomendados
 
-1. Adicionar testes automatizados para as rotas de API (RBAC e regressao).
-2. Decidir se Financeiro/Campanhas vao virar features reais ou saem do menu.
-3. Configurar `OPENAI_API_KEY` se quiser IA real em vez da heuristica local.
-4. Definir dominio proprio (hoje o deploy usa `project-orbit-sand.vercel.app`).
-5. Revisar rotacao de segredos (`NEXTAUTH_SECRET`, `APIFY_TOKEN`) periodicamente.
+1. Estender os testes de API para cobrir 200 (permissao correta) e 403 (papel
+   errado), nao so 401 (sem sessao).
+2. Configurar `OPENAI_API_KEY` se quiser IA real em vez da heuristica local.
+3. Definir dominio proprio (hoje o deploy usa `project-orbit-sand.vercel.app`).
+4. Revisar rotacao de segredos (`NEXTAUTH_SECRET`, `APIFY_TOKEN`) periodicamente.
