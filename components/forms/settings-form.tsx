@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 type SettingsState = {
@@ -24,11 +23,10 @@ type SettingsState = {
   smtpPasswordConfigured: boolean;
   databaseNote: string;
   defaultMessage: string;
-  theme: "light" | "dark" | "system";
 };
 
 type SettingsResponse = Partial<
-  Pick<SettingsState, "companyName" | "logoUrl" | "smtpHost" | "smtpUser" | "databaseNote" | "defaultMessage" | "theme">
+  Pick<SettingsState, "companyName" | "logoUrl" | "smtpHost" | "smtpUser" | "databaseNote" | "defaultMessage">
 > & {
   apifyTokenConfigured?: boolean;
   openAiApiKeyConfigured?: boolean;
@@ -47,8 +45,7 @@ const defaultSettings: SettingsState = {
   openAiApiKeyConfigured: false,
   smtpPasswordConfigured: false,
   databaseNote: "",
-  defaultMessage: "Ola {empresa}, tudo bem? Vi o trabalho de voces em {cidade}...",
-  theme: "light"
+  defaultMessage: "Ola {empresa}, tudo bem? Vi o trabalho de voces em {cidade}..."
 };
 
 export function SettingsForm() {
@@ -80,8 +77,7 @@ export function SettingsForm() {
         openAiApiKeyConfigured: Boolean(data.openAiApiKeyConfigured),
         smtpPasswordConfigured: Boolean(data.smtpPasswordConfigured),
         databaseNote: data.databaseNote || "",
-        defaultMessage: data.defaultMessage || defaultSettings.defaultMessage,
-        theme: data.theme === "dark" || data.theme === "system" ? data.theme : "light"
+        defaultMessage: data.defaultMessage || defaultSettings.defaultMessage
       });
       setLoading(false);
     }
@@ -172,19 +168,6 @@ export function SettingsForm() {
             <p className="text-xs leading-5 text-muted-foreground">
               Use as variaveis LOGO_STORAGE_* no .env para Cloudinary, S3/R2 ou outro endpoint externo.
             </p>
-          </div>
-          <div className="space-y-2">
-            <Label>Tema padrao</Label>
-            <Select value={settings.theme} onValueChange={(value) => update("theme", value as SettingsState["theme"])} disabled={loading}>
-              <SelectTrigger>
-                <SelectValue placeholder="Tema" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="light">Claro</SelectItem>
-                <SelectItem value="dark">Escuro</SelectItem>
-                <SelectItem value="system">Sistema</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>
@@ -302,7 +285,6 @@ function buildSettingsPayload(settings: SettingsState) {
     smtpUser: settings.smtpUser,
     databaseNote: settings.databaseNote,
     defaultMessage: settings.defaultMessage,
-    theme: settings.theme,
     ...(settings.apifyToken.trim() ? { apifyToken: settings.apifyToken.trim() } : {}),
     ...(settings.openAiApiKey.trim() ? { openAiApiKey: settings.openAiApiKey.trim() } : {}),
     ...(settings.smtpPassword.trim() ? { smtpPassword: settings.smtpPassword.trim() } : {})

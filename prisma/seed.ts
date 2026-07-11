@@ -83,7 +83,7 @@ async function main() {
       isDefault: true,
       userId: admin.id,
       content:
-        "Ola {empresa}, tudo bem?\n\nVi o trabalho de voces em {cidade} e gostei bastante. Sou da Orbit e percebi algumas oportunidades para atrair mais clientes em {categoria} usando trafego, posicionamento local e WhatsApp.\n\nPosso te mandar uma analise rapida sem compromisso?"
+        "Ola {empresa}, tudo bem?\n\nVi o trabalho de voces em {cidade} e gostei bastante. Sou da Ryze e percebi algumas oportunidades para atrair mais clientes em {categoria} usando trafego, posicionamento local e WhatsApp.\n\nPosso te mandar uma analise rapida sem compromisso?"
     }
   });
 
@@ -92,9 +92,9 @@ async function main() {
     update: {},
     create: {
       id: "orbit-settings",
-      companyName: "Orbit",
+      companyName: "Ryze",
       defaultMessage:
-        "Ola {empresa}, tudo bem?\n\nVi o trabalho de voces e acredito que a Orbit pode ajudar a gerar mais clientes qualificados em {cidade}."
+        "Ola {empresa}, tudo bem?\n\nVi o trabalho de voces e acredito que a Ryze pode ajudar a gerar mais clientes qualificados em {cidade}."
     }
   });
 
