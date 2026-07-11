@@ -3,10 +3,9 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Ryze Agency — Sua marca sobe.",
-  description:
-    "Criamos experiencias digitais que transformam empresas em referencias. Sites premium, sistemas, trafego pago e branding para marcas que querem estar em outro nivel.",
-  applicationName: "Ryze Agency",
+  title: "Orbit Leads",
+  description: "Plataforma premium de prospeccao para agencias de marketing.",
+  applicationName: "Orbit Leads",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/favicon.png",
@@ -15,7 +14,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "Ryze Agency",
+    title: "Orbit Leads",
     statusBarStyle: "black-translucent"
   },
   formatDetection: {
