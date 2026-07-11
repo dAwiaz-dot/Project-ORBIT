@@ -1,6 +1,8 @@
-# Orbit Leads
+# Ryze CRM
 
-Orbit Leads e um SaaS premium de prospeccao para agencias de marketing. O produto foi desenhado para encontrar empresas no Google Maps, filtrar oportunidades comerciais, organizar leads por categoria/cidade, criar mensagens personalizadas e exportar listas prontas para operacao comercial.
+Ryze CRM e um SaaS premium de prospeccao para agencias de marketing. O produto foi desenhado para encontrar empresas no Google Maps, filtrar oportunidades comerciais, organizar leads por categoria/cidade, criar mensagens personalizadas e exportar listas prontas para operacao comercial.
+
+> Documentacao de arquitetura, autenticacao/permissoes e postura de seguranca para quem for assumir o projeto: [`docs/HANDOFF.md`](docs/HANDOFF.md).
 
 ## Stack
 
@@ -248,8 +250,7 @@ npm run db:seed
 
 O design foi pensado para parecer um SaaS vendido para empresas:
 
-- tema claro por padrao
-- dark mode
+- tema escuro (identidade Ryze Agency), sem modo claro
 - sidebar densa e moderna
 - cards de metricas
 - graficos
