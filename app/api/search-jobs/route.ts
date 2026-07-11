@@ -41,12 +41,13 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const parsed = searchJobSchema.safeParse(body);
 
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Filtros invalidos", details: parsed.error.flatten() }, { status: 400 });
-  }
-
   try {
     const user = await requirePermission("searchJobs:create");
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Filtros invalidos", details: parsed.error.flatten() }, { status: 400 });
+    }
+
     const job = await createSearchJob(parsed.data, user.id);
     await recordAudit({
       action: "SEARCH_JOB_CREATED",
@@ -62,6 +63,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ job: toSearchJobDto(job) }, { status: 202 });
   } catch (error) {
     if (isRbacError(error)) return rbacErrorResponse(error);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Filtros invalidos", details: parsed.error.flatten() }, { status: 400 });
+    }
     return createFallbackApifySearch(request, parsed.data);
   }
 }
